@@ -8,7 +8,7 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "nativeMessaging"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "icons": {
     "32": "icon32.png"

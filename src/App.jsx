@@ -5,10 +5,13 @@ function App() {
 
   const onClick = async () => {
     let [tab] = await chrome.tabs.query({ active: true });
-    chrome.scripting.executeScript({
+
+    // Inject the content script
+    await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ["contentScript.js"],
+      files: ["getJobCollectionScript.js", "contentScript.js"],
     });
+
   };
 
   return (

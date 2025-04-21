@@ -28,45 +28,63 @@
 
 // observer.observe(currentJobIndex, { childList: true, subtree: true });
 
-(() => {
-  let currentJobIndex = 0;
-  let jobCollection = [];
 
-  console.log(jobCollection, "jobCollection");
+chrome.runtime.sendMessage(
+  { action: "jobCollectionScriptReady" },
+  (response) => {
+    if (response.message == "START_COLLECTING_JOBS") {
+      console.log("START_COLLECTING_JOBS");
 
-  function collectJobs() {
-    jobCollection = Array.from(
-      document.querySelectorAll(".job-card-container--clickable")
-    );
-    console.log(`Collected ${jobCollection.length} jobs`);
-  }
-
-  async function clickAndApplyNextJob() {
-    if (currentJobIndex < jobCollection.length) {
-      const job = jobCollection[currentJobIndex];
-      job.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => {
-        job.click();
-      }, 2000);
-
-      console.log("job is clicked");
-    } else {
-      console.log("✅ No more jobs to apply to.");
-      observer.disconnect();
+      
+      // collectJobs();
+      // clickAndApplyNextJob();
     }
   }
+);
 
-  const observer = new MutationObserver((mutations) => {
-    currentJobIndex++;
-    setTimeout(clickAndApplyNextJob, 2000); // Wait 2 seconds before moving to the next job
-  });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+// Listen for messages from background.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log("Message received in content script:", request);
+});
 
-  // Start the whole process
-  collectJobs();
-  clickAndApplyNextJob();
-})();
+let currentJobIndex = 0;
+let jobCollection = [];
+
+function collectJobs() {
+  jobCollection = Array.from(
+    document.querySelectorAll(".job-card-container--clickable")
+  );
+  console.log(`Collected ${jobCollection.length} jobs`);
+}
+
+async function clickAndApplyNextJob() {
+  if (currentJobIndex < jobCollection.length) {
+    const job = jobCollection[currentJobIndex];
+    job.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => {
+      job.click();
+    }, 2000);
+
+    console.log("job is clicked");
+  } else {
+    console.log("✅ No more jobs to apply to.");
+    observer.disconnect();
+  }
+}
+
+const observer = new MutationObserver((mutations) => {
+  currentJobIndex++;
+  setTimeout(clickAndApplyNextJob, 2000); // Wait 2 seconds before moving to the next job
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
+
+
+
+
+// Start the whole process
+
