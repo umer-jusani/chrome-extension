@@ -9,9 +9,8 @@ function App() {
     // Inject the content script
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ["getJobCollectionScript.js", "contentScript.js"],
+      files: ["getJobCollectionScript.js"],
     });
-
   };
 
   return (

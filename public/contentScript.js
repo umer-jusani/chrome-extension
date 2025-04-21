@@ -1,19 +1,16 @@
+let observer;
 
-chrome.runtime.sendMessage(
-  { action: "contentScriptReady" },
-  (response) => {
-    if (response.message == "START_APPLYING") {
-      console.log("Start_Applying")
-      handleEasyApply();
-      observeButtons()
-    }
-  }
-);
-
-// Listen for messages from background.js
+// Set up listener first
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Message received in content script:", request);
+  if (request.action === "START_APPLYING") {
+    handleEasyApply();
+    observeButtons();
+  }
+
+  return true;
 });
+
+// Then notify background script
 
 function handleEasyApply() {
   const easyApplyBtn = document.getElementById("jobs-apply-button-id");
@@ -37,8 +34,17 @@ function handleReviewBtn() {
   const reviewBtn = document.querySelector(
     "[data-live-test-easy-apply-review-button]"
   );
-  console.log("✅review", reviewBtn);
   if (reviewBtn) {
+    setTimeout(() => {
+      reviewBtn.click();
+    }, 1000);
+  }
+}
+
+function handleContinueApplyBtn() {
+  const reviewBtn = document.querySelector("[data-live-test-job-apply-button]");
+
+  if (reviewBtn?.innerText == "Continue applying") {
     setTimeout(() => {
       reviewBtn.click();
     }, 1000);
@@ -53,15 +59,26 @@ function handleSubmitApplication() {
     setTimeout(() => {
       submitApplicationBtn.click();
     }, 1000);
+
+    setTimeout(() => {
+      handleCrossBtn();
+
+      // ✅ Disconnect the observer
+      if (observer) {
+        observer.disconnect();
+        console.log("🔌 Observer disconnected after submission.");
+      }
+
+      chrome.runtime.sendMessage({ action: "moveToNextJob" });
+    }, 6000);
   }
 }
 
 function observeButtons() {
-  const observer = new MutationObserver((mutations) => {
+  observer = new MutationObserver((mutations) => {
     handleNextBtn();
+    handleContinueApplyBtn();
     handleReviewBtn();
-    // handleVerifyBtn();
-    handleCrossBtn();
     handleSubmitApplication();
   });
 
@@ -69,16 +86,10 @@ function observeButtons() {
 }
 
 function handleCrossBtn() {
-  const crossBtn = document.querySelector(
-    "[data-test-modal-close-btn]"
-  );
+  const crossBtn = document.querySelector("[data-test-modal-close-btn]");
+  console.log(crossBtn, "crossBtn");
 
   if (crossBtn) {
-    setTimeout(() => {
-      crossBtn.click();
-    }, 1000);
+    crossBtn?.click();
   }
 }
-
-
-

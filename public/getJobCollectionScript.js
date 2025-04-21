@@ -1,90 +1,88 @@
-// let currentJobIndex = 0;
-
-// function getJobCollection() {
-//   const jobCollection = document.querySelectorAll(
-//     ".job-card-container--clickable"
-//   );
-
-//   if (jobCollection.length > currentJobIndex) {
-//     jobCollection[currentJobIndex].click();
-//     currentJobIndex++;
-//   } else {
-//     console.log("No more jobs to apply to");
-//   }
-// }
-
-// // Initial click
-// getJobCollection();
-
-// const observer = new MutationObserver(async (mutations) => {
-//   //   let [tab] = await chrome.tabs.query({ active: true });
-//   //   chrome.scripting.executeScript({
-//   //     target: { tabId: tab.id },
-//   //     files: ["contentScript.js"],
-//   //   });
-//   //   getJobCollection();
-//   console.log("✅ observer run huwa");
-// });
-
-// observer.observe(currentJobIndex, { childList: true, subtree: true });
-
-
-chrome.runtime.sendMessage(
-  { action: "jobCollectionScriptReady" },
-  (response) => {
-    if (response.message == "START_COLLECTING_JOBS") {
-      console.log("START_COLLECTING_JOBS");
-
-      
-      // collectJobs();
-      // clickAndApplyNextJob();
-    }
-  }
-);
-
-
-// Listen for messages from background.js
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("Message received in content script:", request);
-});
-
-let currentJobIndex = 0;
 let jobCollection = [];
+
+// First, let the background know we're ready
+chrome.runtime.sendMessage({ action: "jobCollectionScriptReady" });
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action == "START_COLLECTING_JOBS") {
+    collectJobs();
+    clickNextJob(request.jobIndex, sendResponse);
+    return true; // Keep the message channel open for sendResponse
+  }
+
+  return true;
+});
 
 function collectJobs() {
   jobCollection = Array.from(
-    document.querySelectorAll(".job-card-container--clickable")
-  );
-  console.log(`Collected ${jobCollection.length} jobs`);
+    document.querySelectorAll(
+      ".job-card-container--clickable, " +
+        ".job-card-list__entity-lockup, " +
+        ".jobs-search-results__list-item, " +
+        "[data-job-id]"
+    )
+  ).filter((el) => el.offsetParent !== null);
 }
 
-async function clickAndApplyNextJob() {
-  if (currentJobIndex < jobCollection.length) {
-    const job = jobCollection[currentJobIndex];
-    job.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(() => {
-      job.click();
-    }, 2000);
-
-    console.log("job is clicked");
-  } else {
-    console.log("✅ No more jobs to apply to.");
-    observer.disconnect();
+function clickNextJob(jobIndex, sendResponse) {
+  if (jobIndex >= jobCollection.length) {
+    sendResponse({ action: "noMoreJobs" });
+    return;
   }
+
+  const job = jobCollection[jobIndex];
+  job.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => {
+    job.click();
+    sendResponse({ action: "jobIsClick", jobIndex: jobIndex });
+  }, 2000);
+
+  // Important: Return true to keep the message channel open for the async response
+  return true;
 }
 
-const observer = new MutationObserver((mutations) => {
-  currentJobIndex++;
-  setTimeout(clickAndApplyNextJob, 2000); // Wait 2 seconds before moving to the next job
-});
+// Check if already initialized to prevent duplicate execution
+// if (typeof window.jobCollectorInitialized === "undefined") {
+//   window.jobCollectorInitialized = true;
 
-observer.observe(document.body, {
-  childList: true,
-  subtree: true,
-});
+//   let currentJobIndex = 0;
+//   let jobCollection = [];
+//   let observer;
+//   let waitingForNextJobCommand = false;
 
+//   // Initialize the process
+//   chrome.runtime.sendMessage(
+//     { action: "jobCollectionScriptReady" },
+//     (response) => {
+//       if (response && response.message === "START_COLLECTING_JOBS") {
+//         startJobCollection();
+//       }
+//     }
+//   );
 
+//   function startJobCollection() {
+//     collectJobs();
+//     if (jobCollection.length > 0) {
+//       clickNextJob();
+//     } else {
+//       console.log("[Job Collector] No job cards found");
+//       chrome.runtime.sendMessage({ action: "jobCollectionComplete" });
+//     }
+//   }
 
-
-// Start the whole process
-
+//   // Communication with other scripts
+//   // chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+//   //   console.log(request.action, "request.action");
+//   //   switch (request.action) {
+//   //     case "moveToNextJob":
+//   //       waitingForNextJobCommand = false;
+//   //       currentJobIndex++;
+//   //       clickNextJob();
+//   //       sendResponse({ status: "success" });
+//   //       break;
+//   //   }
+//   //   return true;
+//   // });
+// } else {
+//   console.log("Job Collector already initialized");
+// }
