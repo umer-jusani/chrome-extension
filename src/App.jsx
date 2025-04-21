@@ -3,14 +3,21 @@ import "./App.css";
 function App() {
   const isLogged = true;
 
-  const onClick = async () => {
+  const handleRedirection = async () => {
     let [tab] = await chrome.tabs.query({ active: true });
 
-    // Inject the content script
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ["getJobCollectionScript.js"],
-    });
+    if (tab.url?.includes("indeed.com")) {
+      console.log("ye indeed he babu");
+      // await chrome.scripting.executeScript({
+      //   target: { tabId: tab.id },
+      //   files: ["getJobCollectionScript.js", "contentScript.js"],
+      // });
+    } else if (tab.url?.includes("linkedin.com")) {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ["getJobCollectionScript.js", "contentScript.js"],
+      });
+    }
   };
 
   return (
@@ -26,11 +33,11 @@ function App() {
       <div className="card">
         <div className="card-buttons">
           {isLogged ? (
-            <button onClick={onClick}>Start Auto Applying</button>
+            <button onClick={handleRedirection}>Start Auto Applying</button>
           ) : (
             <>
-              <button onClick={onClick}>Login</button>
-              <button onClick={onClick}>Signup</button>
+              <button onClick={handleRedirection}>Login</button>
+              <button onClick={handleRedirection}>Signup</button>
             </>
           )}
         </div>
