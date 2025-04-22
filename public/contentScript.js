@@ -5,11 +5,8 @@ let isEasyApplyButton;
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_APPLYING") {
     handleEasyApply(sendResponse);
-
     if (isEasyApplyButton) {
       observeButtons(sendResponse);
-    } else {
-      sendResponse({ action: "moveToNextJob" });
     }
   }
 
@@ -17,23 +14,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Then notify background script
-
-function handleEasyApply() {
+function handleEasyApply(sendResponse) {
   const easyApplyBtn = document.getElementById("jobs-apply-button-id");
-  if (easyApplyBtn) {
-    isEasyApplyButton = true
+
+  if (easyApplyBtn?.innerText == "Easy Apply") {
+    console.log("easy apply button found");
+    isEasyApplyButton = true;
     setTimeout(() => {
       easyApplyBtn.click();
-    }, 1000);
+    }, 2000);
+  } else if (easyApplyBtn?.innerText == "Already applied") {
+    console.log("already applied button found");
+    isEasyApplyButton = false;
+    sendResponse({ action: "AlreadyApplied" });
+  } else {
+    console.log("easy apply button not found");
+    isEasyApplyButton = false;
+    sendResponse({ action: "EasyApplyButtonNotFound" });
   }
 }
 
 function handleNextBtn() {
   const nextBtn = document.querySelector("[data-easy-apply-next-button]");
   if (nextBtn) {
+    console.log("next button found");
     setTimeout(() => {
       nextBtn.click();
-    }, 1000);
+    }, 2000);
+  } else {
+    console.log("next button not found");
   }
 }
 
@@ -42,9 +51,10 @@ function handleReviewBtn() {
     "[data-live-test-easy-apply-review-button]"
   );
   if (reviewBtn) {
+    console.log("review button found");
     setTimeout(() => {
       reviewBtn.click();
-    }, 1000);
+    }, 2000);
   }
 }
 
@@ -52,9 +62,10 @@ function handleContinueApplyBtn() {
   const reviewBtn = document.querySelector("[data-live-test-job-apply-button]");
 
   if (reviewBtn?.innerText == "Continue applying") {
+    console.log("continue apply button found");
     setTimeout(() => {
       reviewBtn.click();
-    }, 1000);
+    }, 2000);
   }
 }
 
@@ -63,21 +74,28 @@ function handleSubmitApplication(sendResponse) {
     "[data-live-test-easy-apply-submit-button]"
   );
   if (submitApplicationBtn) {
+    console.log("submit application button found");
     setTimeout(() => {
       submitApplicationBtn.click();
-    }, 1000);
+    }, 2000);
+  }
+}
 
+function checkAndHandleApplicationSentPopup(sendResponse) {
+  const postApplyModal = document.querySelector("[id='post-apply-modal']");
+  const crossBtn = document.querySelector("[data-test-modal-close-btn]");
+
+  if (
+    postApplyModal &&
+    postApplyModal.innerText.includes("Application sent") &&
+    crossBtn
+  ) {
+    console.log("Application sent popup found, closing...");
     setTimeout(() => {
-      handleCrossBtn();
-
-      // ✅ Disconnect the observer
-      if (observer) {
-        observer.disconnect();
-        console.log("🔌 Observer disconnected after submission.");
-      }
-
+      crossBtn.click();
+      if (observer) observer.disconnect();
       sendResponse({ action: "moveToNextJob" });
-    }, 6000);
+    }, 2000);
   }
 }
 
@@ -87,16 +105,20 @@ function observeButtons(sendResponse) {
     handleContinueApplyBtn(sendResponse);
     handleReviewBtn(sendResponse);
     handleSubmitApplication(sendResponse);
+    checkAndHandleApplicationSentPopup(sendResponse);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-function handleCrossBtn() {
-  const crossBtn = document.querySelector("[data-test-modal-close-btn]");
-  console.log(crossBtn, "crossBtn");
+// function handleCrossBtn(sendResponse) {
+//   const crossBtn = document.querySelector("[data-test-modal-close-btn]");
+//   const postApplyModal = document.querySelector("[id='post-apply-modal']");
 
-  if (crossBtn) {
-    crossBtn?.click();
-  }
-}
+//   if (crossBtn && postApplyModal?.innerText?.includes("Application sent")) {
+//     console.log("cross button found");
+//     crossBtn?.click();
+//     sendResponse({ action: "moveToNextJob" });
+//     if (observer) observer.disconnect();
+//   }
+// }

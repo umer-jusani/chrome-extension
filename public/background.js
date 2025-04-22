@@ -3,8 +3,9 @@ let activeTabId = null;
 
 // Track the active tab where the extension is running
 chrome.runtime.onMessage.addListener((request, sender) => {
+  activeTabId = sender.tab.id;
+
   if (request.action === "jobCollectionScriptReady") {
-    activeTabId = sender.tab.id;
     startJobProcessing();
   } else if (request.action === "jobClicked") {
     jobIndex = request.jobIndex;
@@ -14,26 +15,82 @@ chrome.runtime.onMessage.addListener((request, sender) => {
       activeTabId,
       { action: "START_APPLYING" },
       (response) => {
-        if (chrome.runtime.lastError) {
-          console.error("Message failed:", chrome.runtime.lastError);
-          return;
-        }
-
-        console.log(response, "response")
-        if (response?.action == "moveToNextJob") {
-
-        }
+        continueApplying(response);
       }
     );
-
   } else if (request.action === "noMoreJobs") {
     jobIndex = 0; // Reset for next use
     activeTabId = null;
   }
+
+  return true;
 });
+
+function continueApplying(response) {
+  switch (response?.action) {
+    case "moveToNextJob":
+      jobIndex++;
+      startJobProcessing();
+      break;
+
+    case "EasyApplyButtonNotFound":
+      jobIndex++;
+      startJobProcessing();
+      break;
+
+    case "AlreadyApplied":
+      jobIndex++;
+      startJobProcessing();
+      break;
+  }
+}
 
 function startJobProcessing() {
   if (activeTabId !== null) {
-    chrome.tabs.sendMessage(activeTabId, { action: "CLICK_JOB", jobIndex: jobIndex });
+    chrome.tabs.sendMessage(activeTabId, {
+      action: "CLICK_JOB",
+      jobIndex: jobIndex,
+    });
   }
 }
+
+// let jobIndex = 0;
+// let activeTabId = null;
+
+// chrome.runtime.onMessage.addListener((request, sender) => {
+//   if (request.action === "jobCollectionScriptReady") {
+//     activeTabId = sender.tab.id;
+//     startJobProcessing();
+//   } else if (request.action == "jobClicked") {
+//     chrome.tabs.sendMessage(
+//       activeTabId,
+//       { action: "START_APPLYING" },
+//       (response) => {
+//         isProcessing = false;
+//         if (chrome.runtime.lastError) {
+//           console.error(chrome.runtime.lastError);
+//           return;
+//         }
+//         if (response?.action === "moveToNextJob") {
+//           setTimeout(() => {
+//             jobIndex++;
+//             // chrome.runtime.sendMessage(activeTabId, {
+//             //   action: "CLICK_JOB",
+//             //   jobIndex: jobIndex,
+//             // });
+//             startJobProcessing();
+//           }, 1000);
+//         }
+//       }
+//     );
+//   }
+//   return true;
+// });
+
+// function startJobProcessing() {
+//   if (activeTabId === null) return;
+//   chrome.tabs.sendMessage(activeTabId, {
+//     action: "CLICK_JOB",
+//     jobIndex: jobIndex,
+//   });
+// }

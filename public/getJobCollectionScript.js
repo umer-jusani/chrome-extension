@@ -5,10 +5,12 @@ chrome.runtime.sendMessage({ action: "jobCollectionScriptReady" });
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "CLICK_JOB") {
+  console.log("request", request);
+  if (request.action == "CLICK_JOB") {
     collectJobs();
     clickJob(request.jobIndex);
   }
+
   return true;
 });
 
@@ -17,11 +19,13 @@ function collectJobs() {
   jobCollection = Array.from(
     document.querySelectorAll(
       ".job-card-container--clickable, " +
-      ".job-card-list__entity-lockup, " +
-      ".jobs-search-results__list-item, " +
-      "[data-job-id]"
+        ".job-card-list__entity-lockup, " +
+        ".jobs-search-results__list-item, " +
+        "[data-job-id]"
     )
   ).filter((el) => el.offsetParent !== null);
+
+  return;
 }
 
 function clickJob(jobIndex) {
@@ -34,8 +38,8 @@ function clickJob(jobIndex) {
   job.scrollIntoView({ behavior: "smooth", block: "center" });
 
   // Click the job and notify the background after a delay
-  setTimeout(() => {
+  if (job) {
     job.click();
     chrome.runtime.sendMessage({ action: "jobClicked", jobIndex: jobIndex });
-  }, 2000);
+  }
 }
