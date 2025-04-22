@@ -1,10 +1,16 @@
 let observer;
+let isEasyApplyButton;
 
 // Set up listener first
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_APPLYING") {
-    handleEasyApply();
-    observeButtons();
+    handleEasyApply(sendResponse);
+
+    if (isEasyApplyButton) {
+      observeButtons(sendResponse);
+    } else {
+      sendResponse({ action: "moveToNextJob" });
+    }
   }
 
   return true;
@@ -15,6 +21,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function handleEasyApply() {
   const easyApplyBtn = document.getElementById("jobs-apply-button-id");
   if (easyApplyBtn) {
+    isEasyApplyButton = true
     setTimeout(() => {
       easyApplyBtn.click();
     }, 1000);
@@ -51,7 +58,7 @@ function handleContinueApplyBtn() {
   }
 }
 
-function handleSubmitApplication() {
+function handleSubmitApplication(sendResponse) {
   const submitApplicationBtn = document.querySelector(
     "[data-live-test-easy-apply-submit-button]"
   );
@@ -69,17 +76,17 @@ function handleSubmitApplication() {
         console.log("🔌 Observer disconnected after submission.");
       }
 
-      chrome.runtime.sendMessage({ action: "moveToNextJob" });
+      sendResponse({ action: "moveToNextJob" });
     }, 6000);
   }
 }
 
-function observeButtons() {
+function observeButtons(sendResponse) {
   observer = new MutationObserver((mutations) => {
-    handleNextBtn();
-    handleContinueApplyBtn();
-    handleReviewBtn();
-    handleSubmitApplication();
+    handleNextBtn(sendResponse);
+    handleContinueApplyBtn(sendResponse);
+    handleReviewBtn(sendResponse);
+    handleSubmitApplication(sendResponse);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });

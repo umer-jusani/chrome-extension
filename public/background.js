@@ -1,49 +1,39 @@
-// let jobIndex = 5;
+let jobIndex = 0;
+let activeTabId = null;
 
-// chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-//   chrome.runtime.sendMessage(
-//     {
-//       action: "START_COLLECTING_JOBS",
-//       jobIndex: jobIndex,
-//     },
-//     (response) => {
-//       console.log(response, "response");
-//     }
-//   );
-//   //   const tabId = sender.tab.id; // This gives you the correct tab ID
-//   //   if (request.action === "jobCollectionScriptReady") {
-//   //     sendResponse({ message: "START_COLLECTING_JOBS" });
-//   //   }
-
-//   //   if (request.action == "jobReadyForApplication") {
-//   //     chrome.tabs.sendMessage(tabId, {
-//   //       action: "START_APPLYING",
-//   //       jobId: request.jobId,
-//   //     });
-//   //   }
-
-//   return true;
-// });
-
-let jobIndex = 5;
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+// Track the active tab where the extension is running
+chrome.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "jobCollectionScriptReady") {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.tabs.sendMessage(
-        tabs[0].id,
-        {
-          action: "START_COLLECTING_JOBS",
-          jobIndex: jobIndex,
-        },
-        (response) => {
-          console.log(response, "response from content script");
-        }
-      );
-    });
-    return true;
-  }
+    activeTabId = sender.tab.id;
+    startJobProcessing();
+  } else if (request.action === "jobClicked") {
+    jobIndex = request.jobIndex;
 
-  // Handle other actions if needed
-  return true;
+    // Start Easy Apply process for this job
+    chrome.tabs.sendMessage(
+      activeTabId,
+      { action: "START_APPLYING" },
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("Message failed:", chrome.runtime.lastError);
+          return;
+        }
+
+        console.log(response, "response")
+        if (response?.action == "moveToNextJob") {
+
+        }
+      }
+    );
+
+  } else if (request.action === "noMoreJobs") {
+    jobIndex = 0; // Reset for next use
+    activeTabId = null;
+  }
 });
+
+function startJobProcessing() {
+  if (activeTabId !== null) {
+    chrome.tabs.sendMessage(activeTabId, { action: "CLICK_JOB", jobIndex: jobIndex });
+  }
+}
