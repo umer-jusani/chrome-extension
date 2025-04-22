@@ -90,11 +90,7 @@ function checkAndHandleApplicationSentPopup(sendResponse) {
   const postApplyModal = document.querySelector("[id='post-apply-modal']");
   const crossBtn = document.querySelector("[data-test-modal-close-btn]");
 
-  if (
-    postApplyModal &&
-    postApplyModal.innerText.includes("Application sent") &&
-    crossBtn
-  ) {
+  if ((postApplyModal && crossBtn) || postApplyModal?.innerText?.includes("Application sent")) {
     console.log("Application sent popup found, closing...");
     setTimeout(() => {
       crossBtn.click();
