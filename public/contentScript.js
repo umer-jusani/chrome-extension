@@ -26,11 +26,16 @@ function handleEasyApply(sendResponse) {
   } else if (easyApplyBtn?.innerText == "Already applied") {
     console.log("already applied button found");
     isEasyApplyButton = false;
-    sendResponse({ action: "AlreadyApplied" });
+    setTimeout(() => {
+      sendResponse({ action: "AlreadyApplied" });
+    }, 2000);
+
   } else {
     console.log("easy apply button not found");
     isEasyApplyButton = false;
-    sendResponse({ action: "EasyApplyButtonNotFound" });
+    setTimeout(() => {
+      sendResponse({ action: "EasyApplyButtonNotFound" });
+    }, 2000);
   }
 }
 
