@@ -1,5 +1,6 @@
 let observer;
 let isEasyApplyButton;
+let allQuestions = [];
 
 // Set up listener first
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -29,7 +30,6 @@ function handleEasyApply(sendResponse) {
     setTimeout(() => {
       sendResponse({ action: "AlreadyApplied" });
     }, 2000);
-
   } else {
     console.log("easy apply button not found");
     isEasyApplyButton = false;
@@ -49,6 +49,28 @@ function handleNextBtn() {
   } else {
     console.log("next button not found");
   }
+}
+
+function handleJobQuestions() {
+  const container = document.querySelector("form");
+  const targetText = "Additional Questions";
+  const Inputs = container && container?.querySelectorAll("input");
+  const Selects = container && container?.querySelectorAll("select");
+  const allLabels = container && container?.querySelectorAll("label");
+  // const allQuestions = [...Inputs, ...Selects, ...Textareas];
+
+  console.log("allLabels");
+
+  fetch("");
+
+  // // Array.from se container ke sabhi descendants milenge
+  // const found = Array.from(  ).some((el) =>
+  //   el.textContent.includes(targetText)
+  // );
+
+  // if (found) {
+  //   console.log("milgye");
+  // }
 }
 
 function handleReviewBtn() {
@@ -90,7 +112,10 @@ function checkAndHandleApplicationSentPopup(sendResponse) {
   const postApplyModal = document.querySelector("[id='post-apply-modal']");
   const crossBtn = document.querySelector("[data-test-modal-close-btn]");
 
-  if ((postApplyModal && crossBtn) || postApplyModal?.innerText?.includes("Application sent")) {
+  if (
+    (postApplyModal && crossBtn) ||
+    postApplyModal?.innerText?.includes("Application sent")
+  ) {
     console.log("Application sent popup found, closing...");
     setTimeout(() => {
       crossBtn.click();
@@ -106,6 +131,7 @@ function observeButtons(sendResponse) {
     handleContinueApplyBtn(sendResponse);
     handleReviewBtn(sendResponse);
     handleSubmitApplication(sendResponse);
+    handleJobQuestions();
     checkAndHandleApplicationSentPopup(sendResponse);
   });
 

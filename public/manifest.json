@@ -17,10 +17,6 @@
     {
       "matches": ["https://*.indeed.com/*"],
       "js": ["./indeed/indeedContent.js"]
-    },
-    {
-      "matches": ["https://*.linkedin.com/*"],
-      "js": ["./linkedin/linkedinContent.js"]
     }
   ]
 }

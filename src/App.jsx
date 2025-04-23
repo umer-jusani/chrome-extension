@@ -13,8 +13,8 @@ function App() {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: [
-          "/linkedin/getJobCollectionScript.js",
-          "/linkedin/contentScript.js",
+          "./linkedin/getJobCollectionScript.js",
+          "./linkedin/contentScript.js",
         ],
       });
     }
