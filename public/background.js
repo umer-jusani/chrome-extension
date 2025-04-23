@@ -16,6 +16,7 @@ const indeedBackground = () => {
   let isRunning = false;
   let currentJobIndex = 0;
   let jobLinks = [];
+  console.log("🚀 ~ jobLinks:", jobLinks);
   console.log("bg js");
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -35,6 +36,12 @@ const indeedBackground = () => {
   });
 
   async function processNextJob() {
+    console.log(
+      "🚀 ~ processNextJob ~ currentTab:",
+      isRunning,
+      currentJobIndex,
+      jobLinks
+    );
     if (!isRunning || currentJobIndex >= jobLinks.length) {
       isRunning = false;
       currentJobIndex = 0;

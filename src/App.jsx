@@ -1,3 +1,4 @@
+import { getIndeedJobCollection } from "../public/indeed/getIndeedJobCollection";
 import "./App.css";
 
 function App() {
@@ -7,15 +8,8 @@ function App() {
     let [tab] = await chrome.tabs.query({ active: true });
 
     if (tab.url?.includes("indeed.com")) {
-      console.log("ye indeed he babu");
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: [
-          "/indeed/getIndeedJobCollection.js",
-          "/indeed/indeedContent.js",
-        ],
-      });
-    } else if (tab.url?.includes("linkedin.com")) {
+      getIndeedJobCollection();
+    } else {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: [
@@ -25,6 +19,21 @@ function App() {
       });
     }
   };
+
+  function collectJobLinks() {
+    console.log("Collecting Job Application");
+    const jobCards = document.querySelectorAll('[class*="job_seen_beacon"]');
+    return Array.from(jobCards)
+      .map((card) => {
+        const anchor =
+          card.querySelector('a[href*="/rc/clk"]') ||
+          card.querySelector('a[href*="/pagead/"]') ||
+          card.querySelector('a[id^="job_"]');
+
+        return anchor ? anchor.href : null;
+      })
+      .filter((link) => link);
+  }
 
   return (
     <>

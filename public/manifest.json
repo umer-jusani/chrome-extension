@@ -12,5 +12,15 @@
   "host_permissions": ["http://*/*", "https://*/*"],
   "icons": {
     "32": "icon32.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.indeed.com/*"],
+      "js": ["./indeed/indeedContent.js"]
+    },
+    {
+      "matches": ["https://*.linkedin.com/*"],
+      "js": ["./linkedin/linkedinContent.js"]
+    }
+  ]
 }
