@@ -51,26 +51,41 @@ function handleNextBtn() {
   }
 }
 
-function handleJobQuestions() {
+function handleJobQuestions(sendResponse) {
   const container = document.querySelector("form");
-  const targetText = "Additional Questions";
-  const Inputs = container && container?.querySelectorAll("input");
-  const Selects = container && container?.querySelectorAll("select");
-  const allLabels = container && container?.querySelectorAll("label");
-  // const allQuestions = [...Inputs, ...Selects, ...Textareas];
+  const inputs = container && container?.querySelectorAll(".artdeco-text-input--container")
+  const selectBox = container && container?.querySelectorAll("[data-test-text-entity-list-form-component]")
 
-  console.log("allLabels");
+  if (!inputs || inputs?.length == 0) return;
 
-  fetch("");
+  // if (observer) observer.disconnect();
 
-  // // Array.from se container ke sabhi descendants milenge
-  // const found = Array.from(  ).some((el) =>
-  //   el.textContent.includes(targetText)
-  // );
+  let Obj_Form_Input = Array.from(inputs)?.map(ele => ({
+    label: ele.children[0].innerText,
+    element: ele.children[1],
+  }));
 
-  // if (found) {
-  //   console.log("milgye");
-  // }
+  let Obj_Form_SelectBox = Array.from(selectBox)?.map(ele => ({
+    label: ele.children[0].innerText,
+    element: ele.children[2],
+    options: Array.from(ele.children[2]?.children)?.map(ele => ele.value)
+  }));
+
+
+  // filling the input field
+  Obj_Form_Input?.forEach(ele => {
+    ele.element.value = "23"
+  })
+
+  // filling the selectbox field
+  Obj_Form_SelectBox?.forEach(ele => {
+    ele.element.value = ele.options[2];
+  })
+
+  console.log(Obj_Form_Input, "Obj_Form_Input")
+  console.log(Obj_Form_SelectBox, "Obj_Form_SelectBox")
+
+  // observeButtons(sendResponse)
 }
 
 function handleReviewBtn() {
@@ -131,7 +146,7 @@ function observeButtons(sendResponse) {
     handleContinueApplyBtn(sendResponse);
     handleReviewBtn(sendResponse);
     handleSubmitApplication(sendResponse);
-    handleJobQuestions();
+    handleJobQuestions(sendResponse);
     checkAndHandleApplicationSentPopup(sendResponse);
   });
 
