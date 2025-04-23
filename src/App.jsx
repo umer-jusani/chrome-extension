@@ -8,14 +8,20 @@ function App() {
 
     if (tab.url?.includes("indeed.com")) {
       console.log("ye indeed he babu");
-      // await chrome.scripting.executeScript({
-      //   target: { tabId: tab.id },
-      //   files: ["getJobCollectionScript.js", "contentScript.js"],
-      // });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: [
+          "/indeed/getIndeedJobCollection.js",
+          "/indeed/indeedContent.js",
+        ],
+      });
     } else if (tab.url?.includes("linkedin.com")) {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ["getJobCollectionScript.js", "contentScript.js"],
+        files: [
+          "/linkedin/getJobCollectionScript.js",
+          "/linkedin/contentScript.js",
+        ],
       });
     }
   };
