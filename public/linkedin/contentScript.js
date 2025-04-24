@@ -1,29 +1,24 @@
 let observer;
 let isEasyApplyButton;
 let allQuestions = [];
+let isSubmitted = false;
 
-// Set up listener first
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_APPLYING") {
     handleEasyApply(sendResponse);
-    if (isEasyApplyButton) {
-      observeButtons(sendResponse);
-    }
   }
 
   return true;
 });
 
-// Then notify background script
 function handleEasyApply(sendResponse) {
   const easyApplyBtn = document.getElementById("jobs-apply-button-id");
 
   if (easyApplyBtn?.innerText == "Easy Apply") {
-    console.log("easy apply button found");
+    isSubmitted = false;
     isEasyApplyButton = true;
-    setTimeout(() => {
-      easyApplyBtn.click();
-    }, 2000);
+    setTimeout(() => easyApplyBtn.click(), 1000);
+    setTimeout(() => runEasyApplyFlow(sendResponse), 2000);
   } else if (easyApplyBtn?.innerText == "Already applied") {
     console.log("already applied button found");
     isEasyApplyButton = false;
@@ -39,53 +34,45 @@ function handleEasyApply(sendResponse) {
   }
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const runEasyApplyFlow = async (sendResponse) => {
+  while (!isSubmitted) {
+    console.log("🔁 Running Easy Apply Step...");
+
+    handleContinueApplyBtn();
+    handleNextBtn();
+    handleReviewBtn();
+    handleSubmitApplication();
+    // await handleJobQuestions();
+    await sleep(2000);
+
+    const postApplyModal = document.querySelector("[id='post-apply-modal']");
+    const crossBtn = document.querySelector("[data-test-modal-close-btn]");
+
+    if (
+      postApplyModal &&
+      (crossBtn || postApplyModal.innerText.includes("Application sent"))
+    ) {
+      console.log("✅ Application sent detected!");
+      crossBtn?.click();
+      isSubmitted = true;
+      sendResponse({ action: "moveToNextJob" });
+      break;
+    }
+
+    await sleep(1500);
+  }
+};
+
 function handleNextBtn() {
   const nextBtn = document.querySelector("[data-easy-apply-next-button]");
   if (nextBtn) {
     console.log("next button found");
-    setTimeout(() => {
-      nextBtn.click();
-    }, 2000);
+    nextBtn.click();
   } else {
     console.log("next button not found");
   }
-}
-
-function handleJobQuestions(sendResponse) {
-  const container = document.querySelector("form");
-  const inputs = container && container?.querySelectorAll(".artdeco-text-input--container")
-  const selectBox = container && container?.querySelectorAll("[data-test-text-entity-list-form-component]")
-
-  if (!inputs || inputs?.length == 0) return;
-
-  // if (observer) observer.disconnect();
-
-  let Obj_Form_Input = Array.from(inputs)?.map(ele => ({
-    label: ele.children[0].innerText,
-    element: ele.children[1],
-  }));
-
-  let Obj_Form_SelectBox = Array.from(selectBox)?.map(ele => ({
-    label: ele.children[0].innerText,
-    element: ele.children[2],
-    options: Array.from(ele.children[2]?.children)?.map(ele => ele.value)
-  }));
-
-
-  // filling the input field
-  Obj_Form_Input?.forEach(ele => {
-    ele.element.value = "23"
-  })
-
-  // filling the selectbox field
-  Obj_Form_SelectBox?.forEach(ele => {
-    ele.element.value = ele.options[2];
-  })
-
-  console.log(Obj_Form_Input, "Obj_Form_Input")
-  console.log(Obj_Form_SelectBox, "Obj_Form_SelectBox")
-
-  // observeButtons(sendResponse)
 }
 
 function handleReviewBtn() {
@@ -94,73 +81,114 @@ function handleReviewBtn() {
   );
   if (reviewBtn) {
     console.log("review button found");
-    setTimeout(() => {
-      reviewBtn.click();
-    }, 2000);
+    reviewBtn.click();
   }
 }
 
 function handleContinueApplyBtn() {
-  const reviewBtn = document.querySelector("[data-live-test-job-apply-button]");
-
-  if (reviewBtn?.innerText == "Continue applying") {
+  const continueBtn = document.querySelector(
+    "[data-live-test-job-apply-button]"
+  );
+  if (continueBtn?.innerText === "Continue applying") {
     console.log("continue apply button found");
-    setTimeout(() => {
-      reviewBtn.click();
-    }, 2000);
+    continueBtn.click();
   }
 }
 
-function handleSubmitApplication(sendResponse) {
+function handleSubmitApplication() {
   const submitApplicationBtn = document.querySelector(
     "[data-live-test-easy-apply-submit-button]"
   );
   if (submitApplicationBtn) {
     console.log("submit application button found");
-    setTimeout(() => {
-      submitApplicationBtn.click();
-    }, 2000);
+    submitApplicationBtn.click();
   }
 }
 
-function checkAndHandleApplicationSentPopup(sendResponse) {
-  const postApplyModal = document.querySelector("[id='post-apply-modal']");
-  const crossBtn = document.querySelector("[data-test-modal-close-btn]");
+async function handleJobQuestions() {
+  return new Promise(async (resolve) => {
+    const container = document.querySelector("form");
+    if (!container) return resolve();
 
-  if (
-    (postApplyModal && crossBtn) ||
-    postApplyModal?.innerText?.includes("Application sent")
-  ) {
-    console.log("Application sent popup found, closing...");
-    setTimeout(() => {
-      crossBtn.click();
-      if (observer) observer.disconnect();
-      sendResponse({ action: "moveToNextJob" });
-    }, 2000);
-  }
-}
+    const inputs = container.querySelectorAll(".artdeco-text-input--container");
+    const selectBox = container.querySelectorAll(
+      "[data-test-text-entity-list-form-component]"
+    );
+    const radioBtn = container.querySelectorAll("fieldset");
+    const textArea = container.querySelectorAll(
+      "[data-test-multiline-text-form-component]"
+    );
+    let question = [];
 
-function observeButtons(sendResponse) {
-  observer = new MutationObserver((mutations) => {
-    handleNextBtn(sendResponse);
-    handleContinueApplyBtn(sendResponse);
-    handleReviewBtn(sendResponse);
-    handleSubmitApplication(sendResponse);
-    handleJobQuestions(sendResponse);
-    checkAndHandleApplicationSentPopup(sendResponse);
+    if (inputs?.length > 0)
+      question.push(...serializeQuestion(inputs, "input"));
+    if (selectBox?.length > 0)
+      question.push(...serializeQuestion(selectBox, "select"));
+    if (radioBtn?.length > 0)
+      question.push(...serializeQuestion(radioBtn, "radio"));
+    if (textArea?.length > 0)
+      question.push(...serializeQuestion(textArea, "textarea"));
+
+    if (question.length > 0) {
+      // const data = await getAnswer(question);
+    }
+
+    resolve();
   });
-
-  observer.observe(document.body, { childList: true, subtree: true });
 }
 
-// function handleCrossBtn(sendResponse) {
-//   const crossBtn = document.querySelector("[data-test-modal-close-btn]");
-//   const postApplyModal = document.querySelector("[id='post-apply-modal']");
+const serializeQuestion = (questionElements, type) => {
+  if (type === "input") {
+    return Array.from(questionElements).map((ele) => ({
+      question: ele.children[0]?.innerText,
+    }));
+  }
 
-//   if (crossBtn && postApplyModal?.innerText?.includes("Application sent")) {
-//     console.log("cross button found");
-//     crossBtn?.click();
-//     sendResponse({ action: "moveToNextJob" });
-//     if (observer) observer.disconnect();
-//   }
-// }
+  if (type === "select") {
+    return Array.from(questionElements).map((ele) => ({
+      question: ele.children[0]?.innerText,
+      options: Array.from(ele.children[2]?.children)?.map((el) => el.value),
+    }));
+  }
+
+  if (type === "radio") {
+    return Array.from(questionElements).map((ele) => ({
+      question: ele.children[0]?.children[0]?.innerText,
+      options: Array.from(ele.children[1]?.querySelectorAll("input")).map(
+        (el) => el?.getAttribute("data-test-text-selectable-option__input")
+      ),
+    }));
+  }
+
+  if (type === "textarea") {
+    return Array.from(questionElements).map((ele) => ({
+      question: ele.querySelector("label")?.innerText,
+    }));
+  }
+
+  return [];
+};
+
+const getAnswer = async (questionList) => {
+  try {
+    const response = await fetch(
+      "https://spaniel-charming-logically.ngrok-free.app/api/v1/cv/get-answer",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          questions: questionList,
+        }),
+        headers: {
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZDI2OWFhZmQtMzQyNi00ZmFjLTk0NGYtYmUzZDUzMmY4ZDI1IiwiaWF0IjoxNzQ1MzkzMTc0LCJleHAiOjE3NDU0MjkxNzR9.IjBlHIbr5kWPit82VWkJPyEMQte8cP79tHASVUqA2WM",
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.log("Error fetching answers:", error);
+    return [];
+  }
+};
