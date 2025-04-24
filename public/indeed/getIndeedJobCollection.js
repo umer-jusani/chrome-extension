@@ -11,7 +11,6 @@ export const getIndeedJobCollection = async () => {
 
     const jobLinks = results[0].result;
     console.log(`Found ${jobLinks.length} jobs to apply to`);
-
     if (jobLinks.length > 0) {
       console.log("🚀 ~ document.getElementById ~ jobLinks:", jobLinks);
       // Store links in background script and start the process
