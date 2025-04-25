@@ -1,7 +1,7 @@
 let observer;
 let isEasyApplyButton;
 let allQuestions = [];
-let isSubmitted = false;
+let isStopFlow = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_APPLYING") {
@@ -15,7 +15,7 @@ function handleEasyApply(sendResponse) {
   const easyApplyBtn = document.getElementById("jobs-apply-button-id");
 
   if (easyApplyBtn?.innerText == "Easy Apply") {
-    isSubmitted = false;
+    isStopFlow = false;
     isEasyApplyButton = true;
     setTimeout(() => easyApplyBtn.click(), 1000);
     setTimeout(() => runEasyApplyFlow(sendResponse), 2000);
@@ -37,15 +37,15 @@ function handleEasyApply(sendResponse) {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const runEasyApplyFlow = async (sendResponse) => {
-  while (!isSubmitted) {
+  while (!isStopFlow) {
     console.log("🔁 Running Easy Apply Step...");
 
+    handleJobQuestions(sendResponse);
     handleContinueApplyBtn();
     handleNextBtn();
     handleReviewBtn();
     handleSubmitApplication();
-    // await handleJobQuestions();
-    await sleep(2000);
+    await sleep(1500);
 
     const postApplyModal = document.querySelector("[id='post-apply-modal']");
     const crossBtn = document.querySelector("[data-test-modal-close-btn]");
@@ -56,7 +56,7 @@ const runEasyApplyFlow = async (sendResponse) => {
     ) {
       console.log("✅ Application sent detected!");
       crossBtn?.click();
-      isSubmitted = true;
+      isStopFlow = true;
       sendResponse({ action: "moveToNextJob" });
       break;
     }
@@ -70,9 +70,7 @@ function handleNextBtn() {
   if (nextBtn) {
     console.log("next button found");
     nextBtn.click();
-  } else {
-    console.log("next button not found");
-  }
+  } 
 }
 
 function handleReviewBtn() {
@@ -105,7 +103,7 @@ function handleSubmitApplication() {
   }
 }
 
-async function handleJobQuestions() {
+async function handleJobQuestions(sendResponse) {
   return new Promise(async (resolve) => {
     const container = document.querySelector("form");
     if (!container) return resolve();
@@ -130,7 +128,11 @@ async function handleJobQuestions() {
       question.push(...serializeQuestion(textArea, "textarea"));
 
     if (question.length > 0) {
-      // const data = await getAnswer(question);
+      isStopFlow = true;
+      const data = await getAnswer(question);
+      isStopFlow = false;
+      runEasyApplyFlow(sendResponse);
+      console.log(data, "data")
     }
 
     resolve();
@@ -176,7 +178,7 @@ const getAnswer = async (questionList) => {
       {
         method: "POST",
         body: JSON.stringify({
-          questions: questionList,
+          questions: ["What is Your age?", "What is Your First Name?", "What is Your Last Name?"],
         }),
         headers: {
           Authorization:
