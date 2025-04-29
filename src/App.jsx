@@ -5,35 +5,34 @@ function App() {
   const isLogged = true;
 
   const handleRedirection = async () => {
+
     let [tab] = await chrome.tabs.query({ active: true });
 
     if (tab.url?.includes("indeed.com")) {
       getIndeedJobCollection();
     } else {
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: [
-          "./linkedin/getJobCollectionScript.js",
-          "./linkedin/contentScript.js",
-        ],
-      });
+
+      chrome.runtime.sendMessage({ action: "StartFlow" });
+
+
+      // const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+      // await chrome.scripting.executeScript({
+      //   target: { tabId: tab.id },
+      // });
+
+      // chrome.runtime.sendMessage({
+      //   action: "startFlow",
+      // });
+      // // await chrome.scripting.executeScript({
+      // //   target: { tabId: tab.id },
+      // //   files: [
+      // //     "./linkedin/getJobCollectionScript.js",
+      // //     "./linkedin/contentScript.js",
+      // //   ],
+      // // });
     }
   };
-
-  function collectJobLinks() {
-    console.log("Collecting Job Application");
-    const jobCards = document.querySelectorAll('[class*="job_seen_beacon"]');
-    return Array.from(jobCards)
-      .map((card) => {
-        const anchor =
-          card.querySelector('a[href*="/rc/clk"]') ||
-          card.querySelector('a[href*="/pagead/"]') ||
-          card.querySelector('a[id^="job_"]');
-
-        return anchor ? anchor.href : null;
-      })
-      .filter((link) => link);
-  }
 
   return (
     <>

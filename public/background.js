@@ -89,6 +89,7 @@ const linkedinBackground = () => {
 
   // Track the active tab where the extension is running
   chrome.runtime.onMessage.addListener((request, sender) => {
+    console.log("requestBackgruond", request)
     activeTabId = sender.tab.id;
 
     if (request.action === "jobCollectionScriptReady") {
