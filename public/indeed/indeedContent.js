@@ -1,5 +1,6 @@
 console.log("Auto Apply Script Running...");
-let url = "https://spaniel-charming-logically.ngrok-free.app/api/v1/";
+// let url = "https://pleasant-mole-nominally.ngrok-free.app/api/v1/";
+let url = "https://api.jobbeey.com/api/v1/";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Received message:", message);
@@ -68,10 +69,7 @@ function handleApplicationForm() {
 
       case formText.includes("Answer these questions from the employer"):
         fillEmployerQuestions();
-
         // moveToNextJob();
-
-        //yaha pr kuch nhi krna bs ye case kgy rehne dena
         break;
 
       case formText.includes("Please review your application"):
@@ -207,6 +205,29 @@ const pastJobSelection = () => {
   handleApplicationForm();
 };
 
+function setNativeValue(element, value) {
+  const lastValue = element.value;
+  element.value = value;
+
+  const event = new Event("input", { bubbles: true });
+  // React/Vue ko force karne ke liye:
+  const tracker = element._valueTracker;
+  if (tracker) {
+    tracker.setValue(lastValue);
+  }
+
+  element.dispatchEvent(event);
+}
+
+function setCheckedRadio(radio) {
+  const prototype = Object.getPrototypeOf(radio);
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, "checked");
+  descriptor.set.call(radio, true);
+
+  radio.dispatchEvent(new Event("click", { bubbles: true }));
+  radio.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 const fillEmployerQuestions = async () => {
   console.log("Filling employer questions...");
 
@@ -253,60 +274,49 @@ const fillEmployerQuestions = async () => {
   });
 
   console.log("📤 Sending to server:", questionArray);
+  console.log("questionArray", questionArray);
 
   try {
-    // const response = await fetch(url + "cv/get-answer", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //     Authorization:
-    //       "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZDI2OWFhZmQtMzQyNi00ZmFjLTk0NGYtYmUzZDUzMmY4ZDI1IiwiaWF0IjoxNzQ1MzkzMTc0LCJleHAiOjE3NDU0MjkxNzR9.IjBlHIbr5kWPit82VWkJPyEMQte8cP79tHASVUqA2WM",
-    //   },
-    //   body: JSON.stringify({ questions: questionArray }),
-    // });
-    // if (!response.ok) {
-    //   throw new Error(`HTTP error! Status: ${response.status}`);
-    // }
-    // const result = await response.json();
-    const result = {
-      status: 201,
-      message: "Your Answer",
-      response: {
-        details: [
-          {
-            question:
-              "Please list 2-3 dates and time ranges that you could do an interview.",
-            answer: "---",
-          },
-          {
-            question:
-              "What is the highest level of education you have completed?*",
-            // answer: "MEng Computer Science",
-            answer: "High School",
-          },
-          {
-            question: "Do you speak English And Urdu?*",
-            answer: "No",
-          },
-          {
-            question:
-              "How many years of Graphic Designing experience do you have?*",
-            answer: "0",
-          },
-          {
-            question: "Are you located in Karachi?*",
-            answer: "No",
-          },
-        ],
+    const response = await fetch(url + "cv/get-answer", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOWYwNmFjZDgtOWUxOS00Y2JmLTk3YWYtOGViMzFmMzg4ODlhIiwiaWF0IjoxNzQ1OTMwMDg5LCJleHAiOjE3NDY1MzQ4ODl9.EIxLeakH2iMhi2PF9-K9nkIkMUrpjNy_fGyd-vY_GFo",
       },
-    };
-    console.log("✅ API response:", result);
+      body: JSON.stringify({ questions: questionArray }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    const result = await response.json();
+
+    // const result = {
+    //   status: 201,
+    //   message: "Your Answer",
+    //   response: {
+    //     details: {
+    //       questions: [
+    //         {
+    //           question: "Are you located in Karachi?*",
+    //           answer: "No",
+    //         },
+    //         {
+    //           question:
+    //             'This is an employer-written question. You can report inappropriate questions to Indeed through the "Report Job" link at the bottom of the job description.  "Please share a link of your portfolio or your best work, we will review your portfolio and shortlist based on that"',
+    //           answer: "a",
+    //         },
+    //       ],
+    //     },
+    //   },
+    // };
+    console.log("✅ API result:", result);
 
     questionItems.forEach((item) => {
       const questionText =
         item.querySelector("label, legend")?.textContent?.trim() ||
         item.textContent?.trim();
-      const match = result?.response?.details?.find((r) =>
+      const match = result?.response?.details?.questions?.find((r) =>
         questionText?.includes(r.question)
       );
 
@@ -338,9 +348,11 @@ const fillEmployerQuestions = async () => {
       else if (radioElements.length > 0 && typeof answer === "string") {
         radioElements.forEach((radio) => {
           const label = radio.closest("label")?.textContent?.trim();
+          console.log("object");
           if (label && label.toLowerCase() === answer.toLowerCase()) {
-            radio.checked = true;
-            radio.dispatchEvent(new Event("change", { bubbles: true }));
+            // radio.checked = true;
+            // radio.dispatchEvent(new Event("change", { bubbles: true }));
+            setCheckedRadio(radio);
           }
         });
       }
@@ -399,106 +411,19 @@ const fillEmployerQuestions = async () => {
       continueButton.click();
     }
 
-    // handleApplicationForm();
+    handleApplicationForm();
   } catch (error) {
     console.error("❌ Error submitting questions:", error);
   }
 };
 
-// const fillEmployerQuestions = async () => {
-//   console.log("Filling employer questions...");
-
-//   const questionItems = document.querySelectorAll(".ia-Questions-item");
-
-//   const questionArray = Array.from(questionItems).map((q) =>
-//     q.textContent?.trim()
-//   );
-
-//   try {
-//     const response = await fetch(url + "cv/get-answer", {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZDI2OWFhZmQtMzQyNi00ZmFjLTk0NGYtYmUzZDUzMmY4ZDI1IiwiaWF0IjoxNzQ1MzkzMTc0LCJleHAiOjE3NDU0MjkxNzR9.IjBlHIbr5kWPit82VWkJPyEMQte8cP79tHASVUqA2WM`,
-//       },
-//       body: JSON.stringify({ question: questionArray }),
-//     });
-
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! Status: ${response.status}`);
-//     }
-
-//     const result = await response.json();
-//     console.log("✅ API response:", result);
-
-//     //dummy Response
-//     // let response = [
-//     //   {
-//     //     question:
-//     //       "Please list 2-3 dates and time ranges that you could do an interview.",
-//     //     answer: "---",
-//     //   },
-//     //   {
-//     //     question: "How many years of Graphic Design experience do you have?*",
-//     //     answer: "0",
-//     //   },
-//     //   {
-//     //     question:
-//     //       "What is the highest level of education you have completed?*Select an optionNoneMiddle SchoolHigh SchoolIntermediateBachelor'sMaster'sDoctorate",
-//     //     answer: "MEng Computer Science",
-//     //   },
-//     //   {
-//     //     question:
-//     //       'This is an employer-written question. You can report inappropriate questions to Indeed through the "Report Job" link at the bottom of the job description.  "Have you ever done design work for skin care?"',
-//     //     answer: "---",
-//     //   },
-//     //   {
-//     //     question: "Are you located in Karachi?*YesNo",
-//     //     answer: true,
-//     //   },
-//     // ];
-
-//     questionItems.forEach((item) => {
-//       const questionText = item.textContent?.trim();
-//       const match = response.find((r) => questionText.includes(r.question));
-
-//       if (!match) return;
-
-//       const inputElement = item.querySelector('input:not([type="radio"])');
-//       const textareaElement = item.querySelector("textarea");
-//       const radioElements = item.querySelectorAll('input[type="radio"]');
-
-//       if (inputElement) {
-//         inputElement.value = match.answer;
-//         inputElement.dispatchEvent(new Event("input", { bubbles: true }));
-//       } else if (textareaElement) {
-//         textareaElement.value = match.answer;
-//         textareaElement.dispatchEvent(new Event("input", { bubbles: true }));
-//       } else if (radioElements.length > 0) {
-//         radioElements.forEach((radio) => {
-//           const label = radio.closest("label")?.textContent?.trim();
-//           if (match.question?.includes(label)) {
-//             radio.checked = true;
-//             radio.dispatchEvent(new Event("change", { bubbles: true }));
-//           }
-//         });
-//       }
-//     });
-
-//     // if (continueButton) {
-//     //   console.log("Found continue button, clicking...");
-//     //   continueButton.click();
-//     // }
-
-//     // handleApplicationForm();
-//   } catch (error) {
-//     console.error("❌ Error submitting questions:", error);
-//   }
-// };
-
 const finalSubmit = () => {
+  console.log("observer start");
+  observer.observe(document.body, {
+    childList: true,
+    subtree: false,
+  });
   console.log("Application review step reached...");
-
   // const buttons = [...(formContainer?.querySelectorAll("button") ?? [])];
   // const continueButton = buttons?.find((btn) => {
   //   const text = btn?.textContent.trim().toLowerCase();
