@@ -1,36 +1,33 @@
+import { useState } from "react";
 import { getIndeedJobCollection } from "../public/indeed/getIndeedJobCollection";
 import "./App.css";
 
 function App() {
   const isLogged = true;
+  const [error, setError] = useState(null);
 
   const handleRedirection = async () => {
-
     let [tab] = await chrome.tabs.query({ active: true });
 
     if (tab.url?.includes("indeed.com")) {
       getIndeedJobCollection();
     } else {
+      if (
+        !tab.url?.includes(
+          "https://www.linkedin.com/jobs/collections/recommended"
+        )
+      ) {
+        setError("Please go to this path /jobs/collections/recommended");
+        return;
+      }
 
-      chrome.runtime.sendMessage({ action: "StartFlow" });
-
-
-      // const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      // await chrome.scripting.executeScript({
-      //   target: { tabId: tab.id },
-      // });
-
-      // chrome.runtime.sendMessage({
-      //   action: "startFlow",
-      // });
-      // // await chrome.scripting.executeScript({
-      // //   target: { tabId: tab.id },
-      // //   files: [
-      // //     "./linkedin/getJobCollectionScript.js",
-      // //     "./linkedin/contentScript.js",
-      // //   ],
-      // // });
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: [
+          "./linkedin/getJobCollectionScript.js",
+          "./linkedin/contentScript.js",
+        ],
+      });
     }
   };
 
@@ -56,6 +53,7 @@ function App() {
           )}
         </div>
         <p>Boost Your Resume With AI And Apply To Jobs In One Click!</p>
+        {error && <p style={{ color: "red" }}>{error}</p>}
       </div>
       <a
         href="https://master.d337x6ro71a0no.amplifyapp.com/"

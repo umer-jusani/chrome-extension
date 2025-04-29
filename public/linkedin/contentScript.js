@@ -3,6 +3,23 @@ let isEasyApplyButton;
 let allQuestions = [];
 let isStopFlow = false;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let fakeResponse = [
+  {
+    question:
+      "How many years of experience do you have in cloud sales or AWS solution selling?",
+    answer: "0",
+  },
+  {
+    question:
+      "Have you previously worked in a sales role focused specifically on AWS products and services?\\nHave you previously worked in a sales role focused specifically on AWS products and services?\\n",
+    answer: "No",
+  },
+  {
+    question:
+      "Have you completed the following level of education: Bachelor's Degree?\\nHave you completed the following level of education: Bachelor's Degree?\\n",
+    answer: "Yes",
+  },
+];
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_APPLYING") {
@@ -100,6 +117,7 @@ function handleSubmitApplication() {
   if (submitApplicationBtn) {
     console.log("submit application button found");
     submitApplicationBtn.click();
+    statusApiCall("success");
   }
 }
 
@@ -119,7 +137,6 @@ async function handleJobQuestions(sendResponse) {
   if (!container) return;
 
   const questions = collectQuestions(container);
-  console.log("questions", questions);
 
   const errorMessage = document
     ?.querySelector("[data-test-form-element-error-messages]")
@@ -130,8 +147,16 @@ async function handleJobQuestions(sendResponse) {
     return;
   }
 
+  // if (!errorMessage && isApiCall) {
+  //   sendResponse({ action: "moveToNextJob" });
+  //   isApiCall = false;
+  //   return;
+  // }
+
   // stop flow
   isStopFlow = true;
+
+  console.log(questions, "questions");
 
   const data = await getAnswer(
     questions?.map((q) => ({
@@ -141,41 +166,12 @@ async function handleJobQuestions(sendResponse) {
   );
   console.log("data", data);
 
-  // let data = {
-  //   status: 201,
-  //   message: "Your Answer",
-  //   response: {
-  //     details: [
-  //       {
-  //         question: "How many years of work experience do you have with B2C?",
-  //         answer: "0",
-  //       },
-  //     ],
-  //   },
-  // };
-
   if (data?.status === 201) {
-    fillAnswers(questions, data?.response?.details || []);
+    fillAnswers(questions, data?.response?.details?.questions || []);
     isStopFlow = false;
+    // isApiCall = true;
     runEasyApplyFlow(sendResponse);
   }
-
-  //   console.log("🔁 Running Job Questions Step...");
-  //   const container = document.querySelector("form");
-  //   if (!container) return;
-  //   const questions = collectQuestions(container);
-  //   if (!questions.length) return;
-  //   // const isAllFieldsFilled = checkIfFieldsAlreadyFilled(questions);
-  //   console.log("isAllFieldsFilled", isAllFieldsFilled);
-  //   if (isAllFieldsFilled) {
-  //     console.log("All fields already filled. Skipping autofill.");
-  //     return;
-  //   }
-  //   isStopFlow = true;
-  //   const data = await getAnswer(questions);
-  //   if (data?.status === 201) {
-  //     fillAnswers(questions, data?.response?.details || []);
-  //   }
 }
 
 function collectQuestions(container) {
@@ -217,6 +213,7 @@ function fillAnswers(questionList, answerDetails) {
 
     if (el?.querySelector("select")) {
       const select = el.querySelector("select");
+      console.log("select", select);
       if (select) {
         select.value = answer;
         select.dispatchEvent(new Event("change", { bubbles: true }));
@@ -233,13 +230,14 @@ function fillAnswers(questionList, answerDetails) {
 
     if (el?.querySelector("fieldset")) {
       const radios = el.querySelectorAll("input[type='radio']");
+      console.log(radios, "radios");
       radios.forEach((radio) => {
-        if (
-          radio?.nextElementSibling?.innerText?.toLowerCase() ===
-          answer?.toLowerCase()
-        ) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event("change", { bubbles: true }));
+        const label = radio?.nextElementSibling?.innerText
+          ?.trim()
+          .toLowerCase();
+
+        if (label == answer) {
+          setCheckedRadio(radio);
         }
       });
     }
@@ -315,7 +313,7 @@ const serializeQuestion = (questionElements, type) => {
 const getAnswer = async (questionList) => {
   try {
     const response = await fetch(
-      "https://spaniel-charming-logically.ngrok-free.app/api/v1/cv/get-answer",
+      "https://api.jobbeey.com/api/v1/cv/get-answer",
       {
         method: "POST",
         body: JSON.stringify({
@@ -323,7 +321,7 @@ const getAnswer = async (questionList) => {
         }),
         headers: {
           Authorization:
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZDI2OWFhZmQtMzQyNi00ZmFjLTk0NGYtYmUzZDUzMmY4ZDI1IiwiaWF0IjoxNzQ1MzkzMTc0LCJleHAiOjE3NDU0MjkxNzR9.IjBlHIbr5kWPit82VWkJPyEMQte8cP79tHASVUqA2WM",
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOWYwNmFjZDgtOWUxOS00Y2JmLTk3YWYtOGViMzFmMzg4ODlhIiwiaWF0IjoxNzQ1OTMxOTUyLCJleHAiOjE3NDY1MzY3NTJ9.iVgaXQWuqbSmqR8rkIIqIz6AXcwSTmqk6m71Nep2Puk",
           "Content-Type": "application/json",
         },
       }
@@ -335,3 +333,49 @@ const getAnswer = async (questionList) => {
     return [];
   }
 };
+
+const statusApiCall = async (status = "") => {
+  try {
+    await fetch("https://api.jobbeey.com/api/v1/applications-log", {
+      method: "POST",
+      body: JSON.stringify({
+        status: status,
+        application_url: window.location.href,
+        platform: "LINKEDIN",
+      }),
+      headers: {
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOWYwNmFjZDgtOWUxOS00Y2JmLTk3YWYtOGViMzFmMzg4ODlhIiwiaWF0IjoxNzQ1OTI2OTUzLCJleHAiOjE3NDY1MzE3NTN9.so7up91N0yXV1qM_kymAj5LpDIrwPwhzYM3KWrTUi20",
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    console.log("Error fetching answers:", error);
+  }
+};
+
+//   console.log("🔁 Running Job Questions Step...");
+//   const container = document.querySelector("form");
+//   if (!container) return;
+//   const questions = collectQuestions(container);
+//   if (!questions.length) return;
+//   // const isAllFieldsFilled = checkIfFieldsAlreadyFilled(questions);
+//   console.log("isAllFieldsFilled", isAllFieldsFilled);
+//   if (isAllFieldsFilled) {
+//     console.log("All fields already filled. Skipping autofill.");
+//     return;
+//   }
+//   isStopFlow = true;
+//   const data = await getAnswer(questions);
+//   if (data?.status === 201) {
+//     fillAnswers(questions, data?.response?.details || []);
+//   }
+
+function setCheckedRadio(radio) {
+  const prototype = Object.getPrototypeOf(radio);
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, "checked");
+  descriptor.set.call(radio, true);
+
+  radio.dispatchEvent(new Event("click", { bubbles: true }));
+  radio.dispatchEvent(new Event("change", { bubbles: true }));
+}
