@@ -106,7 +106,7 @@ const linkedinBackground = () => {
         }
       );
     } else if (request.action === "noMoreJobs") {
-      jobIndex = 0; // Reset for next use
+      jobIndex = 0;
       activeTabId = null;
     }
 
@@ -128,6 +128,11 @@ const linkedinBackground = () => {
       case "AlreadyApplied":
         jobIndex++;
         startJobProcessing();
+        break;
+
+      case "limitReached":
+        jobIndex = 0;
+        activeTabId = null;
         break;
     }
   }

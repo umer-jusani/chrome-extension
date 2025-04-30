@@ -38,6 +38,18 @@ function handleEasyApply(sendResponse) {
   }
 }
 
+
+function handleLimitReach(sendResponse) {
+  let msg = document.querySelector(".artdeco-inline-feedback__message").innerText;
+
+
+  if (msg?.includes("reached the Easy Apply application limit")) {
+    console.log("limitReached")
+    isStopFlow = true;
+    sendResponse({ action: "limitReached" });
+  }
+}
+
 const runEasyApplyFlow = async (sendResponse) => {
   while (!isStopFlow) {
     console.log("🔁 Running Easy Apply Step...");
@@ -47,6 +59,7 @@ const runEasyApplyFlow = async (sendResponse) => {
     handleNextBtn();
     handleReviewBtn();
     handleSubmitApplication();
+    handleLimitReach(sendResponse)
     await sleep(1500);
 
     const postApplyModal = document.querySelector("[id='post-apply-modal']");
