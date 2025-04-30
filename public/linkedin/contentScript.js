@@ -1,25 +1,10 @@
-let observer;
 let isEasyApplyButton;
 let allQuestions = [];
 let isStopFlow = false;
+let answerFillAttempts = 0;
+let isAnswerFilled = false;
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-let fakeResponse = [
-  {
-    question:
-      "How many years of experience do you have in cloud sales or AWS solution selling?",
-    answer: "0",
-  },
-  {
-    question:
-      "Have you previously worked in a sales role focused specifically on AWS products and services?\\nHave you previously worked in a sales role focused specifically on AWS products and services?\\n",
-    answer: "No",
-  },
-  {
-    question:
-      "Have you completed the following level of education: Bachelor's Degree?\\nHave you completed the following level of education: Bachelor's Degree?\\n",
-    answer: "Yes",
-  },
-];
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_APPLYING") {
@@ -90,6 +75,14 @@ function handleNextBtn() {
   }
 }
 
+function handleCrossBtn() {
+  const crossBtn = document.querySelector("[data-test-modal-close-btn]");
+  if (crossBtn) {
+    console.log("cross button found");
+    crossBtn.click();
+  }
+}
+
 function handleReviewBtn() {
   const reviewBtn = document.querySelector(
     "[data-live-test-easy-apply-review-button]"
@@ -132,10 +125,28 @@ function handleGetStartedBtn() {
   }
 }
 
+function handleGetStartedBtn() {
+  const getStartedBtn = Array.from(document.querySelectorAll("button")).find(
+    (ele) => ele.innerText == "Get started"
+  );
+
+  if (getStartedBtn) {
+    console.log("get started button found");
+    getStartedBtn.click();
+  }
+}
+
+function handleDiscardBtn() {
+  const discardBtn = document.querySelector("[data-control-name=discard_application_confirm_btn]")
+  if (discardBtn) {
+    console.log("Discard button found");
+    discardBtn.click();
+  }
+}
+
 async function handleJobQuestions(sendResponse) {
   const container = document.querySelector("form");
   if (!container) return;
-
   const questions = collectQuestions(container);
 
   const errorMessage = document
@@ -143,34 +154,45 @@ async function handleJobQuestions(sendResponse) {
     ?.querySelector("span")?.innerText;
 
   if (!errorMessage) {
-    console.log("Skipping Questions");
+    console.log("No error message - skipping questions");
+    answerFillAttempts = 0; // Reset counter when no errors
     return;
   }
 
-  // if (!errorMessage && isApiCall) {
-  //   sendResponse({ action: "moveToNextJob" });
-  //   isApiCall = false;
-  //   return;
-  // }
 
-  // stop flow
-  isStopFlow = true;
+  // Only proceed if we haven't filled answers yet OR we've tried less than 3 times
+  if (errorMessage && (!isAnswerFilled || answerFillAttempts < 1)) {
+    console.log("Processing questions...");
+    const data = await getAnswer(
+      questions?.map((q) => ({
+        options: q?.options,
+        question: q?.question,
+      }))
+    );
 
-  console.log(questions, "questions");
+    if (data?.status === 201) {
+      answerFillAttempts++; // Increment attempt counter
+      isStopFlow = true; // Pause flow while we fill answers
 
-  const data = await getAnswer(
-    questions?.map((q) => ({
-      options: q?.options,
-      question: q?.question,
-    }))
-  );
-  console.log("data", data);
+      await sleep(1000); // Give some time for UI to settle
+      fillAnswers(questions, data?.response?.details?.questions || []);
+      isAnswerFilled = true;
 
-  if (data?.status === 201) {
-    fillAnswers(questions, data?.response?.details?.questions || []);
-    isStopFlow = false;
-    // isApiCall = true;
-    runEasyApplyFlow(sendResponse);
+      // Wait longer after filling answers before continuing
+      await sleep(2000);
+
+      isStopFlow = false;
+      return; // Let the flow continue naturally
+    }
+  }
+  // If we've tried multiple times and still have errors, give up
+  else if (errorMessage && isAnswerFilled && answerFillAttempts >= 1) {
+    sendResponse({ action: "moveToNextJob" });
+    console.log("Multiple attempts failed - moving to next job");
+    isStopFlow = true;
+    answerFillAttempts = 0; // Reset for next job
+    handleCrossBtn();
+    handleDiscardBtn();
   }
 }
 
@@ -193,51 +215,53 @@ function collectQuestions(container) {
   return question;
 }
 
+
 function fillAnswers(questionList, answerDetails) {
+  console.log("now filling answers")
   questionList.forEach((q) => {
     const answerObj = answerDetails.find(
-      (item) => item?.question.trim() === q.question.trim()
+      (item) => item?.question?.includes(q.question.trim())
     );
+
     if (!answerObj) return;
 
-    const answer = answerObj.answer;
-    const el = q.element;
+    const answer = answerObj.answer?.trim().toLowerCase();
+    const el = q?.element;
 
-    if (el?.querySelector("input")) {
-      const input = el.querySelector("input");
-      if (input) {
-        input.value = answer;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+    // Text input
+    const input = el?.querySelector("input:not([type=radio]):not([type=checkbox])");
+    if (input) {
+      input.value = answerObj.answer;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
-    if (el?.querySelector("select")) {
-      const select = el.querySelector("select");
-      console.log("select", select);
-      if (select) {
-        select.value = answer;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+    // Select dropdown
+    const select = el?.querySelector("select");
+    if (select) {
+      select.value = answerObj.answer;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
-    if (el?.querySelector("textarea")) {
-      const textarea = el.querySelector("textarea");
-      if (textarea) {
-        textarea.value = answer;
-        textarea.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+
+    // Textarea
+    const textarea = el?.querySelector("textarea");
+    if (textarea) {
+      textarea.value = answerObj.answer;
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
-    if (el?.querySelector("fieldset")) {
-      const radios = el.querySelectorAll("input[type='radio']");
-      console.log(radios, "radios");
+    // Radio buttons
+    const radios = el?.querySelectorAll("input[type=radio]");
+    if (radios?.length) {
       radios.forEach((radio) => {
-        const label = radio?.nextElementSibling?.innerText
-          ?.trim()
-          .toLowerCase();
+        const label =
+          radio?.nextElementSibling?.innerText?.trim().toLowerCase() ||
+          radio.value?.trim().toLowerCase();
 
-        if (label == answer) {
-          setCheckedRadio(radio);
+        if (label === answer) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event("change", { bubbles: true }));
+          radio.dispatchEvent(new Event("input", { bubbles: true }));
         }
       });
     }
@@ -276,9 +300,9 @@ const serializeQuestion = (questionElements, type) => {
     return Array.from(questionElements).map((ele) => {
       const optionsContainer = ele.children[2]?.children;
       return {
-        question: ele.children[0]?.innerText || "",
+        question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
         options: optionsContainer
-          ? Array.from(optionsContainer).map((el) => el.value)
+          ? Array.from(optionsContainer).map((el) => el.value)?.filter(ele => !ele.includes("Select an option"))
           : [],
         element: ele,
       };
@@ -287,13 +311,13 @@ const serializeQuestion = (questionElements, type) => {
 
   if (type === "radio") {
     return Array.from(questionElements).map((ele) => {
-      const radioInputs = ele.children[1]?.querySelectorAll("input");
+      const radioInputs = ele?.querySelectorAll("input[type=radio]");
       return {
-        question: ele.children[0]?.children[0]?.innerText || "",
+        question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
         options: radioInputs
           ? Array.from(radioInputs).map((el) =>
-              el?.getAttribute("data-test-text-selectable-option__input")
-            )
+            el?.getAttribute("data-test-text-selectable-option__input")
+          )
           : [],
         element: ele,
       };
@@ -302,7 +326,7 @@ const serializeQuestion = (questionElements, type) => {
 
   if (type === "textarea") {
     return Array.from(questionElements).map((ele) => ({
-      question: ele.querySelector("label")?.innerText || "",
+      question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
       element: ele,
     }));
   }
@@ -354,22 +378,6 @@ const statusApiCall = async (status = "") => {
   }
 };
 
-//   console.log("🔁 Running Job Questions Step...");
-//   const container = document.querySelector("form");
-//   if (!container) return;
-//   const questions = collectQuestions(container);
-//   if (!questions.length) return;
-//   // const isAllFieldsFilled = checkIfFieldsAlreadyFilled(questions);
-//   console.log("isAllFieldsFilled", isAllFieldsFilled);
-//   if (isAllFieldsFilled) {
-//     console.log("All fields already filled. Skipping autofill.");
-//     return;
-//   }
-//   isStopFlow = true;
-//   const data = await getAnswer(questions);
-//   if (data?.status === 201) {
-//     fillAnswers(questions, data?.response?.details || []);
-//   }
 
 function setCheckedRadio(radio) {
   const prototype = Object.getPrototypeOf(radio);
