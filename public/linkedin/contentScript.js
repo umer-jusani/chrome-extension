@@ -3,7 +3,6 @@ let allQuestions = [];
 let isStopFlow = false;
 let answerFillAttempts = 0;
 let isAnswerFilled = false;
-
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -194,6 +193,7 @@ async function handleJobQuestions(sendResponse) {
     answerFillAttempts = 0; // Reset for next job
     handleCrossBtn();
     handleDiscardBtn();
+    statusApiCall("not_applicable");
   }
 }
 

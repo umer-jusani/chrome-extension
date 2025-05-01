@@ -1,23 +1,23 @@
-import { useState } from "react";
 import { getIndeedJobCollection } from "../public/indeed/getIndeedJobCollection";
 import "./App.css";
+import LinkedInIcon from "../src/assets/linkedinIcon.png";
+import IndeedIcon from "../src/assets/indeedIcon.png";
+import { useState } from "react";
 
 function App() {
   const isLogged = true;
-  const [error, setError] = useState(null);
+  const [platformsActive, setPlatformsActive] = useState(false);
 
   const handleRedirection = async () => {
     let [tab] = await chrome.tabs.query({ active: true });
 
     if (tab.url?.includes("indeed.com")) {
       getIndeedJobCollection();
-    } else {
-      if (
-        !tab.url?.includes(
-          "https://www.linkedin.com/jobs/collections/recommended"
-        )
-      ) {
-        setError("Please go to this path /jobs/collections/recommended");
+    } else if (tab.url?.includes("linkedin.com")) {
+      if (!tab.url?.includes("https://www.linkedin.com/jobs/collections")) {
+        chrome.tabs.update(tab.id, {
+          url: "https://www.linkedin.com/jobs/collections",
+        });
         return;
       }
 
@@ -28,6 +28,8 @@ function App() {
           "./linkedin/contentScript.js",
         ],
       });
+    } else {
+      setPlatformsActive(true);
     }
   };
 
@@ -53,7 +55,17 @@ function App() {
           )}
         </div>
         <p>Boost Your Resume With AI And Apply To Jobs In One Click!</p>
-        {error && <p style={{ color: "red" }}>{error}</p>}
+      </div>
+      <div
+        style={{
+          display: platformsActive ? "flex" : "none",
+          gap: "10px",
+          justifyContent: "center",
+          marginBlock: "10px",
+        }}
+      >
+        <img src={LinkedInIcon} alt="logo" width={30} height={30} />
+        <img src={IndeedIcon} alt="logo" width={30} height={30} />
       </div>
       <a
         href="https://master.d337x6ro71a0no.amplifyapp.com/"
