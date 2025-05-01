@@ -15,11 +15,6 @@ if (window.location.pathname.includes("/viewjob")) {
     const applyButton =
       document.querySelector("#indeedApplyButton") ||
       document.querySelector(".jobsearch-IndeedApplyButton-newDesign");
-    // document.querySelector('[id*="applyButton"]') ||
-    // document.querySelector('button[aria-label*="Apply"]') ||
-    // [...document.querySelectorAll("button")].find((btn) =>
-    //   btn.textContent.toLowerCase().includes("apply")
-    // );
 
     if (applyButton && applyButton?.textContent !== "Applied") {
       console.log("Found apply button, clicking....");
@@ -69,7 +64,6 @@ function handleApplicationForm() {
 
       case formText.includes("Answer these questions from the employer"):
         fillEmployerQuestions();
-        // moveToNextJob();
         break;
 
       case formText.includes("Please review your application"):
@@ -205,29 +199,6 @@ const pastJobSelection = () => {
   handleApplicationForm();
 };
 
-function setNativeValue(element, value) {
-  const lastValue = element.value;
-  element.value = value;
-
-  const event = new Event("input", { bubbles: true });
-  // React/Vue ko force karne ke liye:
-  const tracker = element._valueTracker;
-  if (tracker) {
-    tracker.setValue(lastValue);
-  }
-
-  element.dispatchEvent(event);
-}
-
-function setCheckedRadio(radio) {
-  const prototype = Object.getPrototypeOf(radio);
-  const descriptor = Object.getOwnPropertyDescriptor(prototype, "checked");
-  descriptor.set.call(radio, true);
-
-  radio.dispatchEvent(new Event("click", { bubbles: true }));
-  radio.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
 const fillEmployerQuestions = async () => {
   console.log("Filling employer questions...");
 
@@ -268,13 +239,11 @@ const fillEmployerQuestions = async () => {
 
     return {
       question: questionText,
-      // type,
       options,
     };
   });
 
   console.log("📤 Sending to server:", questionArray);
-  console.log("questionArray", questionArray);
 
   try {
     const response = await fetch(url + "cv/get-answer", {
@@ -335,6 +304,7 @@ const fillEmployerQuestions = async () => {
       // Text or number input
       if (inputElement) {
         inputElement.value = answer;
+        console.log("🚀 ~ questionItems.forEach ~ answer:", answer);
         inputElement.dispatchEvent(new Event("input", { bubbles: true }));
       }
 
@@ -386,6 +356,7 @@ const fillEmployerQuestions = async () => {
       else if (selectElement && typeof answer === "string") {
         Array.from(selectElement.options).forEach((opt) => {
           if (opt.textContent?.trim().toLowerCase() === answer.toLowerCase()) {
+            // if (opt.textContent?.trim().toLowerCase() === "pakistan") {
             opt.selected = true;
             selectElement.dispatchEvent(new Event("change", { bubbles: true }));
           }
@@ -424,6 +395,17 @@ const finalSubmit = () => {
     subtree: false,
   });
   console.log("Application review step reached...");
+  const captchaWrapper = document.querySelector("#captcha-wrapper");
+  const textNode = document.createTextNode(
+    "Fill captcha and click on Submit (Jobbey)"
+  );
+  captchaWrapper.appendChild(textNode);
+  if (captchaWrapper) {
+    captchaWrapper.scrollIntoView({
+      behavior: "smooth",
+    });
+  }
+
   // const buttons = [...(formContainer?.querySelectorAll("button") ?? [])];
   // const continueButton = buttons?.find((btn) => {
   //   const text = btn?.textContent.trim().toLowerCase();
@@ -446,8 +428,18 @@ const moveToNextJob = () => {
   setTimeout(() => {
     console.log("Moving to next job...");
     chrome.runtime.sendMessage({ action: "applicationCompleted" });
-  }, 2000);
+  }, 1000);
 };
+
+//for set value of radio
+function setCheckedRadio(radio) {
+  const prototype = Object.getPrototypeOf(radio);
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, "checked");
+  descriptor.set.call(radio, true);
+
+  radio.dispatchEvent(new Event("click", { bubbles: true }));
+  radio.dispatchEvent(new Event("change", { bubbles: true }));
+}
 
 // Helper function to find elements by text content
 Element.prototype.contains = function (text) {
@@ -456,32 +448,13 @@ Element.prototype.contains = function (text) {
 
 // Add mutation observer to handle dynamic content
 const observer = new MutationObserver((mutations) => {
-  // for (const mutation of mutations) {
-  //   if (mutation.addedNodes.length) {
   const formContainer = document?.querySelector("#ia-container");
 
   if (formContainer) {
     observer.disconnect();
-    console.log("chala mutation");
-
+    console.log("mutation run");
     setTimeout(handleApplicationForm, 1000);
   }
-  // chrome.storage.local.get("autoApplyInProgress", (data) => {
-  //   const isAutomation = data.autoApplyInProgress;
-  //   console.log(
-  //     "🚀 ~ chrome.storage.local.get ~ isAutomation:",
-  //     isAutomation
-  //   );
-
-  //   if (formContainer) {
-  //     observer.disconnect();
-  //     console.log("chala mutation");
-
-  //     setTimeout(handleApplicationForm, 1000);
-  //   }
-  // });
-  //   }
-  // }
 });
 
 observer.observe(document.body, {
