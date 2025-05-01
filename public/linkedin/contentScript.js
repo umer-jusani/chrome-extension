@@ -192,9 +192,11 @@ async function handleJobQuestions(sendResponse) {
     isStopFlow = true;
     console.log("Multiple attempts failed - moving to next job");
     answerFillAttempts = 0; // Reset for next job
+    isAnswerFilled = false;
     handleCrossBtn();
     await sleep(1500);
     handleDiscardBtn();
+    await sleep(1500);
     sendResponse({ action: "moveToNextJob" });
     return;
   }

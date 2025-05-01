@@ -135,6 +135,11 @@ const linkedinBackground = () => {
         jobIndex = 0;
         activeTabId = null;
         break;
+
+      default:
+        jobIndex++;
+        startJobProcessing();
+        break;
     }
   }
 
