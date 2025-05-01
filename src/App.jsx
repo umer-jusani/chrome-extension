@@ -1,16 +1,25 @@
+import { useEffect, useState } from "react";
 import { getIndeedJobCollection } from "../public/indeed/getIndeedJobCollection";
 import "./App.css";
 import LinkedInIcon from "../src/assets/linkedinIcon.png";
 import IndeedIcon from "../src/assets/indeedIcon.png";
-import { useState } from "react";
 
 function App() {
-  const isLogged = true;
   const [platformsActive, setPlatformsActive] = useState(false);
+  const [isLogged, setIsLogged] = useState(false);
+
+  useEffect(() => {
+    chrome.storage.local.get("accessToken", (result) => {
+      if (result.accessToken) {
+        setIsLogged(true);
+      }
+    });
+  }, []);
+
+  const [error, setError] = useState(null);
 
   const handleRedirection = async () => {
     let [tab] = await chrome.tabs.query({ active: true });
-
     if (tab.url?.includes("indeed.com")) {
       getIndeedJobCollection();
     } else if (tab.url?.includes("linkedin.com")) {
@@ -33,6 +42,10 @@ function App() {
     }
   };
 
+  const handleLogin = async () => {
+    chrome.tabs.create({ url: "http://localhost:3000/login" });
+  };
+
   return (
     <>
       <div>
@@ -49,8 +62,8 @@ function App() {
             <button onClick={handleRedirection}>Start Auto Applying</button>
           ) : (
             <>
-              <button onClick={handleRedirection}>Login</button>
-              <button onClick={handleRedirection}>Signup</button>
+              <button onClick={handleLogin}>Login</button>
+              <button onClick={handleLogin}>Signup</button>
             </>
           )}
         </div>
@@ -59,14 +72,24 @@ function App() {
       <div
         style={{
           display: platformsActive ? "flex" : "none",
-          gap: "10px",
-          justifyContent: "center",
-          marginBlock: "10px",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        <img src={LinkedInIcon} alt="logo" width={30} height={30} />
-        <img src={IndeedIcon} alt="logo" width={30} height={30} />
+        <p>Apply on!</p>
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            justifyContent: "center",
+            marginBlock: "10px",
+          }}
+        >
+          <img src={LinkedInIcon} alt="logo" width={30} height={30} />
+          <img src={IndeedIcon} alt="logo" width={30} height={30} />
+        </div>
       </div>
+
       <a
         href="https://master.d337x6ro71a0no.amplifyapp.com/"
         className="read-the-docs"

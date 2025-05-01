@@ -270,25 +270,6 @@ const fillEmployerQuestions = async () => {
     }
     const result = await response.json();
 
-    // const result = {
-    //   status: 201,
-    //   message: "Your Answer",
-    //   response: {
-    //     details: {
-    //       questions: [
-    //         {
-    //           question: "Are you located in Karachi?*",
-    //           answer: "No",
-    //         },
-    //         {
-    //           question:
-    //             'This is an employer-written question. You can report inappropriate questions to Indeed through the "Report Job" link at the bottom of the job description.  "Please share a link of your portfolio or your best work, we will review your portfolio and shortlist based on that"',
-    //           answer: "a",
-    //         },
-    //       ],
-    //     },
-    //   },
-    // };
     console.log("✅ API result:", result);
 
     questionItems.forEach((item) => {
@@ -451,6 +432,26 @@ function setCheckedRadio(radio) {
   radio.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+const updateStatus = async (status = "") => {
+  try {
+    await fetch("https://api.jobbeey.com/api/v1/applications-log", {
+      method: "POST",
+      body: JSON.stringify({
+        status: status,
+        application_url: window.location.href,
+        platform: "INDEED",
+      }),
+      headers: {
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOWYwNmFjZDgtOWUxOS00Y2JmLTk3YWYtOGViMzFmMzg4ODlhIiwiaWF0IjoxNzQ1OTI2OTUzLCJleHAiOjE3NDY1MzE3NTN9.so7up91N0yXV1qM_kymAj5LpDIrwPwhzYM3KWrTUi20",
+        "Content-Type": "application/json",
+      },
+    });
+  } catch (error) {
+    console.log("Error fetching answers:", error);
+  }
+};
+
 // Helper function to find elements by text content
 Element.prototype.contains = function (text) {
   return this.textContent.includes(text);
@@ -471,7 +472,6 @@ const observer = new MutationObserver((mutations) => {
 chrome.storage.local.get(
   ["shouldStartAutoApplySecond", "shouldStartAutoApply"],
   (result) => {
-    console.log("shouldStartAutoApplySecond", result);
     if (!result.shouldStartAutoApply && result.shouldStartAutoApplySecond) {
       chrome.storage.local.set({ shouldStartAutoApplySecond: false });
 
@@ -484,3 +484,7 @@ chrome.storage.local.get(
     }
   }
 );
+
+chrome.storage.local.get(["access_token"], (result) => {
+  console.log("access_token", result);
+});

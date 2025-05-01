@@ -1,5 +1,19 @@
 let listenerAdded = false;
 
+// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+//   console.log("🚀 ~ chrome.runtime.onMessage.addListener ~ message:", message);
+//   if (message.type === "LOGIN_SUCCESS") {
+//     chrome.storage.local.set({ accessToken: message.token }, () => {
+//       console.log("✅ Token saved.");
+//     });
+//   }
+//   if (message.type === "LOGOUT") {
+//     chrome.storage.local.remove("accessToken", () => {
+//       console.log("🧹 Token cleared. User logged out from extension.");
+//     });
+//   }
+// });
+
 const onBackground = async () => {
   const [currentTab] = await chrome.tabs.query({
     active: true,

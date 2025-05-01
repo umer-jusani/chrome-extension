@@ -15,7 +15,7 @@
     "tabs",
     "storage"
   ],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "host_permissions": ["http://*/*", "https://*/*", "http://localhost:3000/*"],
   "icons": {
     "32": "icon32.png"
   },
@@ -23,6 +23,10 @@
     {
       "matches": ["https://*.indeed.com/*"],
       "js": ["./indeed/indeedContent.js"]
+    },
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["./content.js"]
     }
   ]
 }
