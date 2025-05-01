@@ -1,4 +1,5 @@
-// asddddddddd
+let listenerAdded = false;
+
 const onBackground = async () => {
   const [currentTab] = await chrome.tabs.query({
     active: true,
@@ -13,73 +14,79 @@ const onBackground = async () => {
 };
 
 const indeedBackground = () => {
-  let isRunning = false;
-  let currentJobIndex = 0;
-  let jobLinks = [];
-  console.log("🚀 ~ jobLinks:", jobLinks);
-  console.log("bg js");
+  if (listenerAdded) return;
+  listenerAdded = true;
+
+  console.log("Indeed background script loaded");
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log(
-      "🚀 ~ chrome.runtime.onMessage.addListener ~ message:",
-      message
-    );
+    console.log("Received message:", message);
+
     if (message.action === "startAutoApply") {
-      jobLinks = message.jobLinks;
-      isRunning = true;
-      currentJobIndex = 0;
-      processNextJob();
-    } else if (message.action === "applicationCompleted") {
-      currentJobIndex++;
-      processNextJob();
+      console.log("Starting auto apply");
+
+      chrome.storage.local.set(
+        {
+          isRunning: true,
+          currentJobIndex: 0,
+          jobLinks: message.jobLinks,
+          shouldStartAutoApply: true,
+        },
+        () => {
+          console.log("Storage set, calling processNextJob");
+          processNextJob();
+        }
+      );
     }
+
+    if (message.action === "applicationCompleted") {
+      chrome.storage.local.get(["currentJobIndex"], (data) => {
+        const nextIndex = (data.currentJobIndex || 0) + 1;
+        chrome.storage.local.set({ currentJobIndex: nextIndex }, () => {
+          processNextJob();
+        });
+      });
+    }
+
+    return true;
   });
 
-  async function processNextJob() {
-    console.log(
-      "🚀 ~ processNextJob ~ currentTab:",
-      isRunning,
-      currentJobIndex,
-      jobLinks
-    );
-    if (!isRunning || currentJobIndex >= jobLinks.length) {
-      isRunning = false;
-      currentJobIndex = 0;
-      return;
-    }
+  function processNextJob() {
+    console.log("object", "applicationCompleted");
 
-    // Get current active tab
-    const [currentTab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
+    chrome.storage.local.get(
+      ["jobLinks", "currentJobIndex", "isRunning"],
+      async (data) => {
+        const jobLinks = data.jobLinks || [];
+        let currentJobIndex = data.currentJobIndex || 0;
+        const isRunning = data.isRunning;
 
-    if (currentTab) {
-      // Only close the tab if it's a job details page
-      if (currentTab.url.includes("indeed.com/viewjob")) {
-        await chrome.tabs.remove(currentTab.id);
-        // Open new job in new tab
-        chrome.tabs.create({ url: jobLinks[currentJobIndex], active: true });
-      } else if (currentTab.url.includes("indeed.com")) {
-        // If on indeed.com but not a job page, just open new tab
-        chrome.tabs.create({ url: jobLinks[currentJobIndex], active: true });
-      } else {
-        // If not on indeed.com at all, focus back to indeed tab and open new job
-        const indeeds = await chrome.tabs.query({ url: "*://*.indeed.com/*" });
-        if (indeeds.length > 0) {
-          // Focus the first indeed tab
-          await chrome.tabs.update(indeeds[0].id, { active: true });
-          // Then open new job
-          chrome.tabs.create({ url: jobLinks[currentJobIndex], active: true });
+        if (!isRunning || currentJobIndex >= jobLinks.length) {
+          console.log("Stopping automation: done or not running.");
+          chrome.storage.local.set({ isRunning: false, currentJobIndex: 0 });
+          return;
+        }
+
+        const jobUrl = jobLinks[currentJobIndex];
+        console.log("Opening job:", jobUrl);
+
+        const [currentTab] = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        });
+
+        if (currentTab?.url?.includes("indeed.com/viewjob") && currentTab.id) {
+          chrome.tabs.remove(currentTab.id, () => {
+            chrome.tabs.create({ url: jobUrl, active: true });
+          });
         } else {
-          // If no indeed tabs exist, just open new job
-          chrome.tabs.create({ url: jobLinks[currentJobIndex], active: true });
+          chrome.tabs.create({ url: jobUrl, active: true });
+          chrome.storage.local.set({
+            shouldStartAutoApply: true,
+          });
         }
       }
-    } else {
-      // If no active tab, just open new job
-      chrome.tabs.create({ url: jobLinks[currentJobIndex], active: true });
-    }
+    );
   }
 };
 
