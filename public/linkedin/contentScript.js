@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     handleEasyApply(sendResponse);
   }
 
-  // return true;
+  //   return true;
 });
 
 function handleEasyApply(sendResponse) {
@@ -66,14 +66,13 @@ const runEasyApplyFlow = async (sendResponse) => {
       postApplyModal &&
       (crossBtn || postApplyModal.innerText.includes("Application sent"))
     ) {
+      isStopFlow = true;
       console.log("✅ Application sent detected!");
       crossBtn?.click();
-      isStopFlow = true;
       sendResponse({ action: "moveToNextJob" });
       break;
     }
 
-    await sleep(1500);
   }
 };
 
@@ -187,12 +186,14 @@ async function handleJobQuestions(sendResponse) {
   }
   // If we've tried multiple times and still have errors, give up
   else if (errorMessage && isAnswerFilled && answerFillAttempts >= 1) {
-    sendResponse({ action: "moveToNextJob" });
     console.log("Multiple attempts failed - moving to next job");
     isStopFlow = true;
     answerFillAttempts = 0; // Reset for next job
     handleCrossBtn();
+    await sleep(1000);
     handleDiscardBtn();
+    await sleep(1000);
+    sendResponse({ action: "moveToNextJob" });
     statusApiCall("not_applicable");
   }
 }

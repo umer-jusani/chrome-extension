@@ -16,14 +16,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 function collectJobs() {
   // Collect all visible job elements
-  jobCollection = Array.from(
-    document.querySelectorAll(
-      ".job-card-container--clickable, " +
-        ".job-card-list__entity-lockup, " +
-        ".jobs-search-results__list-item, " +
-        "[data-job-id]"
-    )
-  ).filter((el) => el.offsetParent !== null);
+  jobCollection = Array.from(document.querySelectorAll(".job-card-container--clickable"));
 
   return;
 }
