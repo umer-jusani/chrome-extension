@@ -16,15 +16,25 @@ if (window.location.pathname.includes("/viewjob")) {
       document.querySelector("#indeedApplyButton") ||
       document.querySelector(".jobsearch-IndeedApplyButton-newDesign");
 
-    if (applyButton && applyButton?.textContent !== "Applied") {
-      console.log("Found apply button, clicking....");
-      // chrome.storage.local.set({ autoApplyInProgress: true });
-      applyButton.click();
-    } else {
-      console.log("No apply button found, moving to next job");
-      moveToNextJob();
-    }
-  }, 2000);
+    chrome.storage.local.get(["shouldStartAutoApply"], (result) => {
+      if (result.shouldStartAutoApply) {
+        chrome.storage.local.set({
+          shouldStartAutoApplySecond: true,
+          shouldStartAutoApply: false,
+        });
+        if (applyButton && applyButton?.textContent !== "Applied") {
+          console.log("Found apply button, clicking....");
+          applyButton.click();
+        } else {
+          moveToNextJob();
+        }
+      } else {
+        console.log(
+          "Not running apply btn clicked because it wasn't triggered from search page."
+        );
+      }
+    });
+  }, 1000);
 }
 
 const formContainer =
@@ -93,7 +103,7 @@ function handleApplicationForm() {
         console.log("Default case: Filling application form...");
         break;
     }
-  }, 3000);
+  }, 2000);
 }
 
 const fillContactForm = () => {
@@ -452,12 +462,25 @@ const observer = new MutationObserver((mutations) => {
 
   if (formContainer) {
     observer.disconnect();
-    console.log("mutation run");
     setTimeout(handleApplicationForm, 1000);
+    console.log("mutation run");
+    chrome.storage.local.set({ shouldStartAutoApplySecond: false });
   }
 });
 
-observer.observe(document.body, {
-  childList: true,
-  subtree: false,
-});
+chrome.storage.local.get(
+  ["shouldStartAutoApplySecond", "shouldStartAutoApply"],
+  (result) => {
+    console.log("shouldStartAutoApplySecond", result);
+    if (!result.shouldStartAutoApply && result.shouldStartAutoApplySecond) {
+      chrome.storage.local.set({ shouldStartAutoApplySecond: false });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: false,
+      });
+    } else {
+      console.log("Observer not started: Auto-apply flag is false.");
+    }
+  }
+);

@@ -30,6 +30,7 @@ const indeedBackground = () => {
           isRunning: true,
           currentJobIndex: 0,
           jobLinks: message.jobLinks,
+          shouldStartAutoApply: true,
         },
         () => {
           console.log("Storage set, calling processNextJob");
@@ -56,7 +57,6 @@ const indeedBackground = () => {
     chrome.storage.local.get(
       ["jobLinks", "currentJobIndex", "isRunning"],
       async (data) => {
-        console.log("data print", data);
         const jobLinks = data.jobLinks || [];
         let currentJobIndex = data.currentJobIndex || 0;
         const isRunning = data.isRunning;
@@ -81,6 +81,9 @@ const indeedBackground = () => {
           });
         } else {
           chrome.tabs.create({ url: jobUrl, active: true });
+          chrome.storage.local.set({
+            shouldStartAutoApply: true,
+          });
         }
       }
     );
