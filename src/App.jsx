@@ -16,20 +16,24 @@ function App() {
     });
   }, []);
 
-  const [error, setError] = useState(null);
 
   const handleRedirection = async () => {
     let [tab] = await chrome.tabs.query({ active: true });
     if (tab.url?.includes("indeed.com")) {
       getIndeedJobCollection();
     } else if (tab.url?.includes("linkedin.com")) {
-      if (!tab.url?.includes("https://www.linkedin.com/jobs/collections")) {
+      const url = new URL(tab.url);
+      const pathname = url.pathname;
+
+      // Agar path sirf /jobs ya empty hai, redirect karo
+      if (pathname === "/jobs" || pathname === "/jobs/") {
         chrome.tabs.update(tab.id, {
           url: "https://www.linkedin.com/jobs/collections",
         });
         return;
       }
 
+      // Agar /jobs ke baad kuch aur hai, script run karo
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         files: [
