@@ -5,8 +5,8 @@ chrome.runtime.sendMessage({ action: "jobCollectionScriptReady" });
 
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log("request", request);
   if (request.action == "CLICK_JOB") {
+    console.log("request", request);
     collectJobs();
     clickJob(request.jobIndex);
   }
@@ -29,6 +29,7 @@ function collectJobs() {
 }
 
 function clickJob(jobIndex) {
+  console.log("jobIndex", jobIndex);
   if (jobIndex >= jobCollection.length) {
     chrome.runtime.sendMessage({ action: "noMoreJobs" });
     return;

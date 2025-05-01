@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     handleEasyApply(sendResponse);
   }
 
-  return true;
+  // return true;
 });
 
 function handleEasyApply(sendResponse) {
@@ -38,12 +38,11 @@ function handleEasyApply(sendResponse) {
   }
 }
 
-
 function handleLimitReach(sendResponse) {
   let msg = document.querySelector(".artdeco-inline-feedback__message");
 
   if (msg?.innerText?.includes("reached the Easy Apply application limit")) {
-    console.log("limitReached")
+    console.log("limitReached");
     isStopFlow = true;
     sendResponse({ action: "limitReached" });
   }
@@ -58,7 +57,7 @@ const runEasyApplyFlow = async (sendResponse) => {
     handleNextBtn();
     handleReviewBtn();
     handleSubmitApplication();
-    handleLimitReach(sendResponse)
+    handleLimitReach(sendResponse);
     await sleep(1500);
 
     const postApplyModal = document.querySelector("[id='post-apply-modal']");
@@ -137,9 +136,10 @@ function handleGetStartedBtn() {
   }
 }
 
-
 function handleDiscardBtn() {
-  const discardBtn = document.querySelector("[data-control-name=discard_application_confirm_btn]")
+  const discardBtn = document.querySelector(
+    "[data-control-name=discard_application_confirm_btn]"
+  );
   if (discardBtn) {
     console.log("Discard button found");
     discardBtn.click();
@@ -161,7 +161,6 @@ async function handleJobQuestions(sendResponse) {
     return;
   }
 
-
   // Only proceed if we haven't filled answers yet OR we've tried less than 3 times
   if (errorMessage && (!isAnswerFilled || answerFillAttempts < 1)) {
     console.log("Processing questions...");
@@ -173,10 +172,10 @@ async function handleJobQuestions(sendResponse) {
     );
 
     if (data?.status === 201) {
-      answerFillAttempts++; // Increment attempt counter
-      isStopFlow = true; // Pause flow while we fill answers
+      answerFillAttempts++;
+      isStopFlow = true;
 
-      await sleep(1000); // Give some time for UI to settle
+      await sleep(1000);
       fillAnswers(questions, data?.response?.details?.questions || []);
       isAnswerFilled = true;
 
@@ -184,24 +183,19 @@ async function handleJobQuestions(sendResponse) {
       await sleep(2000);
 
       isStopFlow = false;
-      return; // Let the flow continue naturally
+      return;
     }
   }
   // If we've tried multiple times and still have errors, give up
-  else if (errorMessage && (isAnswerFilled || answerFillAttempts == 1)) {
-    isStopFlow = true;
-    console.log("Multiple attempts failed - moving to next job");
-    answerFillAttempts = 0; // Reset for next job
-    isAnswerFilled = false;
-    handleCrossBtn();
-    await sleep(1500);
-    handleDiscardBtn();
-    await sleep(1500);
+  else if (errorMessage && isAnswerFilled && answerFillAttempts >= 1) {
     sendResponse({ action: "moveToNextJob" });
-    return;
+    console.log("Multiple attempts failed - moving to next job");
+    isStopFlow = true;
+    answerFillAttempts = 0; // Reset for next job
+    handleCrossBtn();
+    handleDiscardBtn();
   }
 }
-
 
 function collectQuestions(container) {
   const inputs = container.querySelectorAll(".artdeco-text-input--container");
@@ -212,7 +206,9 @@ function collectQuestions(container) {
   const textArea = container.querySelectorAll(
     "[data-test-multiline-text-form-component]"
   );
-  let checkbox = container.querySelectorAll("fieldset[data-test-checkbox-form-component]");
+  let checkbox = container.querySelectorAll(
+    "fieldset[data-test-checkbox-form-component]"
+  );
 
   let question = [];
 
@@ -226,16 +222,14 @@ function collectQuestions(container) {
     question.push(...serializeQuestion(checkbox, "checkbox"));
   }
 
-
   return question;
 }
 
-
 function fillAnswers(questionList, answerDetails) {
-  console.log("now filling answers")
+  console.log("now filling answers");
   questionList.forEach((q) => {
-    const answerObj = answerDetails.find(
-      (item) => item?.question?.includes(q.question.trim())
+    const answerObj = answerDetails.find((item) =>
+      item?.question?.includes(q.question.trim())
     );
 
     if (!answerObj) return;
@@ -244,7 +238,9 @@ function fillAnswers(questionList, answerDetails) {
     const el = q?.element;
 
     // Text input
-    const input = el?.querySelector("input:not([type=radio]):not([type=checkbox])");
+    const input = el?.querySelector(
+      "input:not([type=radio]):not([type=checkbox])"
+    );
     if (input) {
       input.value = answerObj.answer;
       input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -256,7 +252,6 @@ function fillAnswers(questionList, answerDetails) {
       select.value = answerObj.answer;
       select.dispatchEvent(new Event("change", { bubbles: true }));
     }
-
 
     // Textarea
     const textarea = el?.querySelector("textarea");
@@ -289,14 +284,14 @@ function fillAnswers(questionList, answerDetails) {
           cb?.nextElementSibling?.innerText?.trim().toLowerCase() ||
           cb.value?.trim().toLowerCase();
 
+        console.log({ label: label, answer }, "checkbox");
         if (label?.includes(answer)) {
           cb.checked = true;
           cb.dispatchEvent(new Event("change", { bubbles: true }));
           cb.dispatchEvent(new Event("input", { bubbles: true }));
         }
-      })
+      });
     }
-
   });
 }
 
@@ -321,64 +316,75 @@ function checkIfFieldsAlreadyFilled(questionList) {
 }
 
 const serializeQuestion = (questionElements, type) => {
-  if (type === "input") {
-    return Array.from(questionElements).map((ele) => ({
-      question: ele.children[0]?.innerText || "",
-      element: ele,
-    }));
-  }
+  if (!questionElements || questionElements.length === 0) return [];
 
-  if (type === "select") {
-    return Array.from(questionElements).map((ele) => {
-      const optionsContainer = ele.children[2]?.children;
-      return {
-        question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
-        options: optionsContainer
-          ? Array.from(optionsContainer).map((el) => el.value)?.filter(ele => !ele.includes("Select an option"))
-          : [],
+  return Array.from(questionElements)
+    .map((ele) => {
+      if (!ele) return null;
+
+      // Common base object
+      const questionObj = {
+        question: "",
         element: ele,
       };
-    });
-  }
 
-  if (type === "radio") {
-    return Array.from(questionElements).map((ele) => {
-      const radioInputs = ele?.querySelectorAll("input[type=radio]");
-      return {
-        question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
-        options: radioInputs
-          ? Array.from(radioInputs).map((el) =>
-            el?.getAttribute("data-test-text-selectable-option__input")
-          )
-          : [],
-        element: ele,
-      };
-    });
-  }
+      // Get question text more reliably
+      const questionText =
+        ele.querySelector(".question-text") || ele.children[0] || ele;
+      if (questionText) {
+        questionObj.question = (
+          questionText.innerText ||
+          questionText.textContent ||
+          ""
+        )
+          .replace(/\s+/g, " ")
+          .trim()
+          .split("\n")[0]
+          .trim();
+      }
 
-  if (type === "textarea") {
-    return Array.from(questionElements).map((ele) => ({
-      question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
-      element: ele,
-    }));
-  }
+      // Handle different question types
+      switch (type) {
+        case "input":
+        case "textarea":
+          // Simple input types just need the question text
+          return questionObj;
 
-  if (type === "checkbox") {
-    return Array.from(questionElements).map((ele) => {
-      const checkboxInputs = ele?.querySelectorAll("input[type=checkbox]");
-      return {
-        question: ele?.children[0].innerText?.split(/\\?n/)[0].trim() || "",
-        element: ele,
-        options: checkboxInputs
-          ? Array.from(checkboxInputs).map((el) =>
-            el?.getAttribute("data-test-text-selectable-option__input")
-          )
-          : []
+        case "select":
+          const selectElement = ele.querySelector("select");
+          if (selectElement) {
+            questionObj.options = Array.from(selectElement.options)
+              .map((option) => option.value)
+              .filter(
+                (value) =>
+                  value && !value.toLowerCase().includes("select an option")
+              );
+          } else {
+            questionObj.options = [];
+          }
+          return questionObj;
+
+        case "radio":
+        case "checkbox":
+          const inputs = ele.querySelectorAll(`input[type=${type}]`);
+          questionObj.options = Array.from(inputs)
+            .map((input) => {
+              // Try different ways to get the option text
+              return (
+                input.getAttribute("data-test-text-selectable-option__input") ||
+                input.value ||
+                input.nextElementSibling?.textContent ||
+                input.closest("label")?.textContent
+              );
+            })
+            .filter((option) => option && option.trim());
+          return questionObj;
+
+        default:
+          return questionObj;
       }
     })
-  }
-
-  return [];
+    .filter((item) => item !== null); // Filter out any null entries
 };
 
 const getAnswer = async (questionList) => {
@@ -424,7 +430,6 @@ const statusApiCall = async (status = "") => {
     console.log("Error fetching answers:", error);
   }
 };
-
 
 function setCheckedRadio(radio) {
   const prototype = Object.getPrototypeOf(radio);
