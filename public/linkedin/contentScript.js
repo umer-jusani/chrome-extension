@@ -40,10 +40,9 @@ function handleEasyApply(sendResponse) {
 
 
 function handleLimitReach(sendResponse) {
-  let msg = document.querySelector(".artdeco-inline-feedback__message").innerText;
+  let msg = document.querySelector(".artdeco-inline-feedback__message");
 
-
-  if (msg?.includes("reached the Easy Apply application limit")) {
+  if (msg?.innerText?.includes("reached the Easy Apply application limit")) {
     console.log("limitReached")
     isStopFlow = true;
     sendResponse({ action: "limitReached" });
@@ -138,16 +137,6 @@ function handleGetStartedBtn() {
   }
 }
 
-function handleGetStartedBtn() {
-  const getStartedBtn = Array.from(document.querySelectorAll("button")).find(
-    (ele) => ele.innerText == "Get started"
-  );
-
-  if (getStartedBtn) {
-    console.log("get started button found");
-    getStartedBtn.click();
-  }
-}
 
 function handleDiscardBtn() {
   const discardBtn = document.querySelector("[data-control-name=discard_application_confirm_btn]")
@@ -199,15 +188,18 @@ async function handleJobQuestions(sendResponse) {
     }
   }
   // If we've tried multiple times and still have errors, give up
-  else if (errorMessage && isAnswerFilled && answerFillAttempts >= 1) {
-    sendResponse({ action: "moveToNextJob" });
-    console.log("Multiple attempts failed - moving to next job");
+  else if (errorMessage && (isAnswerFilled || answerFillAttempts == 1)) {
     isStopFlow = true;
+    console.log("Multiple attempts failed - moving to next job");
     answerFillAttempts = 0; // Reset for next job
     handleCrossBtn();
+    await sleep(1500);
     handleDiscardBtn();
+    sendResponse({ action: "moveToNextJob" });
+    return;
   }
 }
+
 
 function collectQuestions(container) {
   const inputs = container.querySelectorAll(".artdeco-text-input--container");
@@ -218,13 +210,21 @@ function collectQuestions(container) {
   const textArea = container.querySelectorAll(
     "[data-test-multiline-text-form-component]"
   );
+  let checkbox = container.querySelectorAll("fieldset[data-test-checkbox-form-component]");
+
   let question = [];
+
   if (inputs?.length) question.push(...serializeQuestion(inputs, "input"));
   if (selectBox?.length)
     question.push(...serializeQuestion(selectBox, "select"));
   if (radioBtn?.length) question.push(...serializeQuestion(radioBtn, "radio"));
   if (textArea?.length)
     question.push(...serializeQuestion(textArea, "textarea"));
+  if (checkbox?.length) {
+    question.push(...serializeQuestion(checkbox, "checkbox"));
+  }
+
+
   return question;
 }
 
@@ -271,13 +271,30 @@ function fillAnswers(questionList, answerDetails) {
           radio?.nextElementSibling?.innerText?.trim().toLowerCase() ||
           radio.value?.trim().toLowerCase();
 
-        if (label === answer) {
+        if (label?.includes(answer)) {
           radio.checked = true;
           radio.dispatchEvent(new Event("change", { bubbles: true }));
           radio.dispatchEvent(new Event("input", { bubbles: true }));
         }
       });
     }
+
+    //checkbox
+    const checkboxes = el?.querySelectorAll("input[type=checkbox]");
+    if (checkboxes?.length) {
+      checkboxes.forEach((cb) => {
+        const label =
+          cb?.nextElementSibling?.innerText?.trim().toLowerCase() ||
+          cb.value?.trim().toLowerCase();
+
+        if (label?.includes(answer)) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+          cb.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      })
+    }
+
   });
 }
 
@@ -342,6 +359,21 @@ const serializeQuestion = (questionElements, type) => {
       question: ele.children[0]?.innerText?.split(/\\?n/)[0].trim() || "",
       element: ele,
     }));
+  }
+
+  if (type === "checkbox") {
+    return Array.from(questionElements).map((ele) => {
+      const checkboxInputs = ele?.querySelectorAll("input[type=checkbox]");
+      return {
+        question: ele?.children[0].innerText?.split(/\\?n/)[0].trim() || "",
+        element: ele,
+        options: checkboxInputs
+          ? Array.from(checkboxInputs).map((el) =>
+            el?.getAttribute("data-test-text-selectable-option__input")
+          )
+          : []
+      }
+    })
   }
 
   return [];
